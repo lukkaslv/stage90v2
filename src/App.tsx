@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Sparkles, TrendingUp, Clock, Award } from 'lucide-react';
 import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
@@ -41,6 +41,7 @@ function AppContent() {
   const [reviewCount, setReviewCount] = useState(0);
   const [userReviewsMap, setUserReviewsMap] = useState<Record<string, number>>({});
   const [maintenance, setMaintenance] = useState<MaintenanceSettings>(defaultMaintenanceSettings);
+  const addedReleasesScrollRef = useRef<HTMLDivElement>(null);
   const topCatalog = releaseCatalog;
   const latestCatalog = releaseCatalog;
   const openRelease = (nextRelease: Release | string) => { void startTransition(() => setSelectedRelease(nextRelease)); };
@@ -259,9 +260,11 @@ function AppContent() {
                   ყველას ნახვა →
                 </button>
               </div>
-              <div onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="no-scrollbar flex gap-4 overflow-x-auto overflow-y-visible scroll-smooth select-none pb-2">
+              <div ref={addedReleasesScrollRef} onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="flex items-stretch gap-4 overflow-x-auto overflow-y-hidden scroll-smooth scrollbar-none py-2 px-1 select-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {latestCatalog.map((release) => (
-                  <ReleaseCard key={release.id} release={release} onClick={openRelease} userReviewsMap={userReviewsMap} />
+                  <div key={release.id} className="w-[220px] shrink-0 flex flex-col sm:w-[240px] md:w-[250px]">
+                    <ReleaseCard release={release} onClick={openRelease} userReviewsMap={userReviewsMap} />
+                  </div>
                 ))}
               </div>
             </section>
