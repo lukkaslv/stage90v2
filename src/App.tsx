@@ -23,7 +23,7 @@ import { useAuth } from '@/context/auth-context';
 import { LoadingProvider, usePageLoading } from '@/context/LoadingContext';
 import PageLoader from '@/components/PageLoader';
 import MaintenancePlaceholder from '@/components/MaintenancePlaceholder';
-import { defaultMaintenanceSettings, loadMaintenanceSettings, type MaintenanceSettings } from '@/lib/maintenance';
+import { maintenanceMapFromRows, type MaintenanceMap, type MaintenanceRecord } from '@/lib/maintenance';
 
 type AuthMode = 'login' | 'register';
 
@@ -40,7 +40,7 @@ function AppContent() {
   const [releaseCount, setReleaseCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   const [userReviewsMap, setUserReviewsMap] = useState<Record<string, number>>({});
-  const [maintenance, setMaintenance] = useState<MaintenanceSettings>(defaultMaintenanceSettings);
+  const [maintenanceMap, setMaintenanceMap] = useState<MaintenanceMap>({});
   const addedReleasesScrollRef = useRef<HTMLDivElement>(null);
   const addedReleasesDraggingRef = useRef(false);
   const addedReleasesDragStartRef = useRef({ x: 0, scrollLeft: 0 });
@@ -63,7 +63,50 @@ function AppContent() {
   const moveAddedReleases = (distance: number) => { addedReleasesScrollRef.current?.scrollBy({ left: distance, behavior: 'smooth' }); };
 
   useEffect(() => {
-    void loadMaintenanceSettings().then(setMaintenance);
+    const client = supabase;
+    if (!client) return;
+    let cancelled = false;
+    const realtimeUpdatedTabs = new Set<string>();
+    const channel = client
+      .channel('platform_settings_realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'platform_settings' }, (payload) => {
+        const updated = payload.new as Partial<MaintenanceRecord>;
+        if (updated?.tab_key) {
+          realtimeUpdatedTabs.add(updated.tab_key);
+          const row = maintenanceMapFromRows([updated])[updated.tab_key];
+          if (row) setMaintenanceMap((previous) => ({ ...previous, [row.tab_key]: row }));
+        } else if (payload.eventType === 'DELETE') {
+          const deleted = payload.old as { tab_key?: string };
+          if (deleted?.tab_key) {
+            realtimeUpdatedTabs.add(deleted.tab_key);
+            setMaintenanceMap((previous) => {
+              const next = { ...previous };
+              delete next[deleted.tab_key!];
+              return next;
+            });
+          }
+        }
+      })
+      .subscribe();
+
+    const loadMaintenance = async () => {
+      const { data, error } = await client.from('platform_settings').select('*');
+      if (cancelled || error || !data) return;
+      const loaded = maintenanceMapFromRows(data);
+      setMaintenanceMap((previous) => {
+        const next = { ...loaded };
+        realtimeUpdatedTabs.forEach((key) => {
+          if (previous[key]) next[key] = previous[key];
+          else delete next[key];
+        });
+        return next;
+      });
+    };
+    void loadMaintenance();
+    return () => {
+      cancelled = true;
+      void client.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
@@ -159,12 +202,14 @@ function AppContent() {
       <div className="min-h-screen bg-[#0a0a0c]">
         <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => void startTransition(() => setSelectedRelease(null))} activeTab={activeTab} onTabChange={(tab) => void startTransition(() => setActiveTab(tab))} onAdminOpen={() => void startTransition(() => setAdminMode(true))} />
         {showAbout && <PlatformAboutModal onClose={() => setShowAbout(false)} />}
-        <ReleaseDetail
-          release={selectedRelease}
-          onBack={() => { void startTransition(() => { setSelectedRelease(null); handleRefresh(); }); }}
-          onOpenAuth={() => setAuthMode('login')}
-          onReviewSubmitted={handleRefresh}
-        />
+        {maintenanceMap.releases?.is_maintenance
+          ? <MaintenancePlaceholder tabTitle={maintenanceMap.releases.tab_title} customMessage={maintenanceMap.releases.message_geo} />
+          : <ReleaseDetail
+            release={selectedRelease}
+            onBack={() => { void startTransition(() => { setSelectedRelease(null); handleRefresh(); }); }}
+            onOpenAuth={() => setAuthMode('login')}
+            onReviewSubmitted={handleRefresh}
+          />}
         {authMode && (
           <AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} />
         )}
@@ -176,20 +221,20 @@ function AppContent() {
     <div className="min-h-screen bg-[#0a0a0c]">
       <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => void startTransition(() => setSelectedRelease(null))} activeTab={activeTab} onTabChange={(tab) => void startTransition(() => setActiveTab(tab))} onAdminOpen={() => void startTransition(() => setAdminMode(true))} />
       {showAbout && <PlatformAboutModal onClose={() => setShowAbout(false)} />}
-      {adminMode && user?.role === 'admin' ? <AdminDashboard maintenance={maintenance} onMaintenanceChange={setMaintenance} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /> : null}
+      {adminMode && user?.role === 'admin' ? <AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /> : null}
 
-      {!adminMode && maintenance[activeTab].enabled && <MaintenancePlaceholder tabTitle={({ releases: 'რელიზები', top90: 'ტოპ-90', achievements: 'მიღწევები', concerts: 'კონცერტები' }[activeTab])} customMessage={maintenance[activeTab].message} />}
-      {!adminMode && !maintenance[activeTab].enabled && activeTab === 'top90' && <Top90Leaderboard />}
+      {!adminMode && maintenanceMap[activeTab]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[activeTab].tab_title} customMessage={maintenanceMap[activeTab].message_geo} />}
+      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'top90' && <Top90Leaderboard />}
 
-      {!adminMode && !maintenance[activeTab].enabled && activeTab === 'achievements' && <Achievements />}
+      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'achievements' && <Achievements />}
 
-      {!adminMode && !maintenance[activeTab].enabled && activeTab === 'concerts' && (
+      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'concerts' && (
         <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
           <ConcertsSection />
         </main>
       )}
 
-      {!adminMode && !maintenance[activeTab].enabled && activeTab === 'releases' && (
+      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'releases' && (
         <>
           {/* Hero banner */}
           <section className="relative overflow-hidden border-b border-[#1e1e24]">
