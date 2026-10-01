@@ -50,6 +50,11 @@ function valueTierHeading(releaseType?: string): string {
   return 'რელიზის ღირებულება';
 }
 
+function isAlbumOrEp(releaseType?: string): boolean {
+  const normalized = String(releaseType ?? '').trim().toLowerCase();
+  return normalized === 'album' || normalized === 'ალბომი' || normalized === 'ep';
+}
+
 function youtubeEmbedUrl(value?: string): string | null {
   if (!value) return null;
   try {
@@ -131,6 +136,7 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [loadedRelease, setLoadedRelease] = useState<Release | null>(() => fallbackRelease(release));
+  const [childTracks, setChildTracks] = useState<Release[]>([]);
 
   useEffect(() => {
     if (release && typeof release !== 'string') setLoadedRelease(release);
@@ -196,6 +202,21 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
   }, [release]);
 
   const activeRelease = loadedRelease;
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client || !activeRelease || !isAlbumOrEp(activeRelease.release_type ?? activeRelease.type)) {
+      setChildTracks([]);
+      return;
+    }
+    let cancelled = false;
+    const loadTracks = async () => {
+      const { data } = await client.from('releases').select('*').eq('parent_id', activeRelease.id).order('track_number', { ascending: true });
+      if (!cancelled) setChildTracks((data ?? []).map((row) => normalizeRelease(row as Record<string, unknown>)));
+    };
+    void loadTracks();
+    return () => { cancelled = true; };
+  }, [activeRelease]);
 
   const totalScore = useMemo(
     () => computeRZTScore(params, vibeLevel),
@@ -565,6 +586,11 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
             </div>
           </div>
         </div>
+
+        {isAlbumOrEp(activeRelease.release_type ?? activeRelease.type) && <section className="mb-8 rounded-2xl border border-cyan-400/20 bg-[#121215] p-5" aria-labelledby="tracklist-heading">
+          <h2 id="tracklist-heading" className="mb-4 text-lg font-bold text-white">ტრეკების სია</h2>
+          {childTracks.length === 0 ? <p className="text-sm text-gray-500">ამ ალბომში ტრეკები ჯერ არ არის.</p> : <ol className="divide-y divide-white/10">{childTracks.map((track, index) => <li key={String(track.id)} className="flex items-center gap-4 py-3"><span className="w-7 text-center text-sm font-bold text-cyan-300">{index + 1}</span><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{track.title}</p><p className="truncate text-xs text-gray-500">{track.artist}</p></div></li>)}</ol>}
+        </section>}
 
         {/* Divider */}
         <div className="mb-8 h-px bg-[#1e1e24]" />

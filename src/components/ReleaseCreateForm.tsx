@@ -1,7 +1,8 @@
-import { FormEvent, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { CheckCircle2, ClipboardPaste, ImageOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
+import ReleaseRelationshipFields, { type AuthorOption, type TrackOption } from '@/components/ReleaseRelationshipFields';
 
 export type ReleaseCreated = { id: string | number; title: string; is_active: boolean; is_freshman: boolean; is_new_name: boolean };
 interface ReleaseCreateFormProps { onCreated?: (release: ReleaseCreated) => void; onRefresh?: () => void; compact?: boolean; }
@@ -46,7 +47,43 @@ export default function ReleaseCreateForm({ onCreated, onRefresh, compact = fals
   const [resolving, setResolving] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; error?: boolean } | null>(null);
+  const [authors, setAuthors] = useState<AuthorOption[]>([]);
+  const [authorProfileId, setAuthorProfileId] = useState('');
+  const [standaloneTracks, setStandaloneTracks] = useState<TrackOption[]>([]);
+  const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const requestId = useRef(0);
+  const isBundle = releaseType === 'ალბომი' || releaseType === 'EP' || releaseType.toLowerCase() === 'album';
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+    let cancelled = false;
+    const loadRelationships = async () => {
+      const [{ data: authorRows }, { data: trackRows }] = await Promise.all([
+        client.from('profiles').select('id, display_name, role').in('role', ['author', 'media', 'admin']),
+        client.from('releases').select('id, title, artist_name').is('parent_id', null).eq('is_active', true),
+      ]);
+      if (cancelled) return;
+      setAuthors((authorRows ?? []) as AuthorOption[]);
+      setStandaloneTracks((trackRows ?? []) as TrackOption[]);
+    };
+    void loadRelationships();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleAuthorChange = (id: string) => {
+    setAuthorProfileId(id);
+    const author = authors.find((item) => item.id === id);
+    if (author?.display_name) setArtist(author.display_name);
+  };
+
+  const toggleTrack = (id: string) => setSelectedTrackIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id]);
+  const moveTrack = (id: string, direction: -1 | 1) => setSelectedTrackIds((current) => {
+    const index = current.indexOf(id);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= current.length) return current;
+    const next = [...current]; [next[index], next[target]] = [next[target], next[index]]; return next;
+  });
 
   const resolveYouTube = async (rawValue: string) => {
     setYoutubeUrl(rawValue);
@@ -74,18 +111,29 @@ export default function ReleaseCreateForm({ onCreated, onRefresh, compact = fals
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!supabase || !user) return;
+    const client = supabase;
+    if (!client || !user) return;
     if (user.role === 'media' && user.mediaMonthlyReleases >= 5) { setMessage({ text: 'ამ თვეში რელიზების ლიმიტი ამოწურულია.', error: true }); return; }
     setSaving(true); setMessage(null);
-    const { data, error } = await supabase.from('releases').insert({ title: title.trim(), artist_name: artist.trim(), cover_url: coverUrl.trim(), youtube_url: youtubeUrl.trim() || null, release_type: releaseType, season: season.trim(), value_tier: valueTier, is_new_name: isFreshman, is_freshman: isFreshman, is_active: isActive, submitted_by: user.id }).select('id, title, is_active, is_freshman, is_new_name').single();
+    const { data, error } = await client.from('releases').insert({ title: title.trim(), artist_name: artist.trim(), cover_url: coverUrl.trim(), youtube_url: youtubeUrl.trim() || null, release_type: releaseType, season: season.trim(), value_tier: valueTier, is_new_name: isFreshman, is_freshman: isFreshman, is_active: isActive, submitted_by: user.id }).select('id, title, is_active, is_freshman, is_new_name').single();
     if (error) { setMessage({ text: `რელიზის დამატება ვერ მოხერხდა: ${error.message}`, error: true }); setSaving(false); return; }
-    if (user.role === 'media') { const { error: quotaError } = await supabase.from('profiles').update({ media_monthly_releases: user.mediaMonthlyReleases + 1 }).eq('id', user.id); if (quotaError) setMessage({ text: `რელიზი დაემატა, თუმცა ლიმიტის განახლება ვერ მოხერხდა: ${quotaError.message}`, error: true }); await refreshProfile(); }
-    setTitle(''); setArtist(''); setCoverUrl(''); setYoutubeUrl(''); setYoutubeId(null);
+    if (data && authorProfileId) {
+      const { error: authorError } = await client.from('releases').update({ author_profile_id: authorProfileId }).eq('id', data.id);
+      if (authorError) { setMessage({ text: `ავტორის პროფილთან დაკავშირება ვერ შესრულდა: ${authorError.message}`, error: true }); setSaving(false); return; }
+    }
+    if (isBundle && data && selectedTrackIds.length > 0) {
+      const updates = await Promise.all(selectedTrackIds.map((trackId, index) => client.from('releases').update({ parent_id: data.id, track_number: index + 1 }).eq('id', trackId)));
+      const trackError = updates.find((result) => result.error)?.error;
+      if (trackError) { setMessage({ text: `ტრეკების გაერთიანება ვერ შესრულდა: ${trackError.message}`, error: true }); setSaving(false); return; }
+    }
+    if (user.role === 'media') { const { error: quotaError } = await client.from('profiles').update({ media_monthly_releases: user.mediaMonthlyReleases + 1 }).eq('id', user.id); if (quotaError) setMessage({ text: `რელიზი დაემატა, თუმცა ლიმიტის განახლება ვერ მოხერხდა: ${quotaError.message}`, error: true }); await refreshProfile(); }
+    setTitle(''); setArtist(''); setCoverUrl(''); setYoutubeUrl(''); setYoutubeId(null); setAuthorProfileId(''); setSelectedTrackIds([]);
     setMessage({ text: 'რელიზი წარმატებით დაემატა!' }); setSaving(false); if (data) { onCreated?.(data as ReleaseCreated); onRefresh?.(); }
   };
 
   const previewUrl = coverUrl || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : '');
   return <form onSubmit={(event) => void submit(event)} className={`rounded-xl border border-[#25252d] bg-[#121215] ${compact ? 'p-4' : 'p-5'}`}>
+    <ReleaseRelationshipFields authors={authors} authorProfileId={authorProfileId} onAuthorChange={handleAuthorChange} isBundle={isBundle} tracks={standaloneTracks} selectedTrackIds={selectedTrackIds} onToggleTrack={toggleTrack} onMoveTrack={moveTrack} />
     <div className="mb-4 flex items-center justify-between gap-3"><div><h2 className="text-lg font-bold text-white">რელიზის დამატება</h2><p className="mt-1 text-xs text-gray-500">შეავსე ყველა აუცილებელი ველი</p></div>{message?.text === 'რელიზი წარმატებით დაემატა!' && <CheckCircle2 className="h-5 w-5 text-emerald-400" />}</div>
     <label className="mb-4 block text-xs font-semibold text-cyan-200">YouTube ბმული (ავტომატური შევსება)<span className="relative mt-1 block"><ClipboardPaste className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-400" /><input value={youtubeUrl} onChange={(event) => void resolveYouTube(event.target.value)} placeholder="https://www.youtube.com/watch?v=... ან https://youtu.be/..." className={`${fieldClass} pl-9 pr-10`} />{resolving && <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-cyan-400" />}</span></label>
     {previewUrl && <div className="mb-4 overflow-hidden rounded-xl border border-cyan-400/20 bg-[#0b0b0e]"><div className="relative aspect-video w-full bg-gradient-to-br from-cyan-400/10 to-violet-500/10">{previewLoading && <div className="absolute inset-0 animate-pulse bg-white/5" />}{previewUrl ? <img src={previewUrl} alt={title || 'რელიზის გარეკანი'} onLoad={() => setPreviewLoading(false)} onError={(event) => { if (youtubeId && event.currentTarget.src.includes('maxresdefault')) { event.currentTarget.src = `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`; } else { setPreviewLoading(false); event.currentTarget.style.display = 'none'; } }} className="h-full w-full object-cover" /> : <ImageOff className="absolute inset-0 m-auto h-8 w-8 text-gray-600" />}</div><div className="p-3"><p className="truncate text-sm font-bold text-white">{title || 'სათაური ჩაიტვირთება'}</p><p className="mt-1 truncate text-xs text-gray-400">{artist || 'არტისტი ჩაიტვირთება'}</p></div></div>}

@@ -1,5 +1,5 @@
-import { useRef, useState, useEffect } from 'react';
-import { Sparkles, TrendingUp, Clock, Award } from 'lucide-react';
+import { useRef, useState, useEffect, type MouseEvent } from 'react';
+import { ChevronLeft, ChevronRight, Sparkles, TrendingUp, Clock, Award } from 'lucide-react';
 import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import TopCarousel from '@/components/TopCarousel';
@@ -42,10 +42,25 @@ function AppContent() {
   const [userReviewsMap, setUserReviewsMap] = useState<Record<string, number>>({});
   const [maintenance, setMaintenance] = useState<MaintenanceSettings>(defaultMaintenanceSettings);
   const addedReleasesScrollRef = useRef<HTMLDivElement>(null);
+  const addedReleasesDraggingRef = useRef(false);
+  const addedReleasesDragStartRef = useRef({ x: 0, scrollLeft: 0 });
   const topCatalog = releaseCatalog;
   const latestCatalog = releaseCatalog;
   const openRelease = (nextRelease: Release | string) => { void startTransition(() => setSelectedRelease(nextRelease)); };
   const handleRefresh = () => setRefreshKey((key) => key + 1);
+  const startAddedReleasesDrag = (event: MouseEvent<HTMLDivElement>) => {
+    const container = addedReleasesScrollRef.current;
+    if (!container) return;
+    addedReleasesDraggingRef.current = true;
+    addedReleasesDragStartRef.current = { x: event.clientX, scrollLeft: container.scrollLeft };
+  };
+  const moveAddedReleasesDrag = (event: MouseEvent<HTMLDivElement>) => {
+    if (!addedReleasesDraggingRef.current || !addedReleasesScrollRef.current) return;
+    event.preventDefault();
+    addedReleasesScrollRef.current.scrollLeft = addedReleasesDragStartRef.current.scrollLeft - (event.clientX - addedReleasesDragStartRef.current.x);
+  };
+  const stopAddedReleasesDrag = () => { addedReleasesDraggingRef.current = false; };
+  const moveAddedReleases = (distance: number) => { addedReleasesScrollRef.current?.scrollBy({ left: distance, behavior: 'smooth' }); };
 
   useEffect(() => {
     void loadMaintenanceSettings().then(setMaintenance);
@@ -260,12 +275,16 @@ function AppContent() {
                   ყველას ნახვა →
                 </button>
               </div>
-              <div ref={addedReleasesScrollRef} onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="flex items-stretch gap-4 overflow-x-auto overflow-y-hidden scroll-smooth scrollbar-none py-2 px-1 select-none" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+              <div className="group relative">
+                <button type="button" onClick={() => moveAddedReleases(-530)} aria-label="წინა რელიზები" className="absolute left-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/10 bg-[#0a0a0c]/90 p-2 text-white shadow-xl transition hover:border-cyan-300/60 hover:text-cyan-300 md:block"><ChevronLeft className="h-5 w-5" /></button>
+                <div ref={addedReleasesScrollRef} onMouseDown={startAddedReleasesDrag} onMouseMove={moveAddedReleasesDrag} onMouseUp={stopAddedReleasesDrag} onMouseLeave={stopAddedReleasesDrag} onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="flex cursor-grab items-stretch gap-4 overflow-x-auto overflow-y-hidden scroll-smooth scrollbar-none py-2 px-1 select-none active:cursor-grabbing" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {latestCatalog.map((release) => (
                   <div key={release.id} className="w-[220px] shrink-0 flex flex-col sm:w-[240px] md:w-[250px]">
                     <ReleaseCard release={release} onClick={openRelease} userReviewsMap={userReviewsMap} />
                   </div>
                 ))}
+                </div>
+                <button type="button" onClick={() => moveAddedReleases(530)} aria-label="შემდეგი რელიზები" className="absolute right-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/10 bg-[#0a0a0c]/90 p-2 text-white shadow-xl transition hover:border-cyan-300/60 hover:text-cyan-300 md:block"><ChevronRight className="h-5 w-5" /></button>
               </div>
             </section>
 
