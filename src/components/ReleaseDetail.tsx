@@ -478,6 +478,22 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
     setAudioMessage('მოსასმენი ბმული მალე დაემატება');
     window.setTimeout(() => setAudioMessage(''), 3200);
   };
+  const playTrack = (track: Release) => {
+    const embedUrl = youtubeEmbedUrl(track.youtube_url);
+    if (embedUrl) {
+      setYoutubePlayerUrl(embedUrl);
+      setAudioUrl(null);
+      return;
+    }
+    const trackAudioUrl = track.audio_url || track.streaming_url;
+    if (trackAudioUrl) {
+      setAudioUrl(trackAudioUrl);
+      setYoutubePlayerUrl(null);
+      return;
+    }
+    setAudioMessage('ტრეკს მოსასმენი ბმული არ აქვს.');
+    window.setTimeout(() => setAudioMessage(''), 3200);
+  };
   const scoreColor = (s: number) =>
     s >= 90 ? 'text-cyan-300 border-cyan-400/30 bg-cyan-400/10' :
     s >= 80 ? 'text-violet-300 border-violet-400/30 bg-violet-400/10' :
@@ -589,7 +605,7 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
 
         {isAlbumOrEp(activeRelease.release_type ?? activeRelease.type) && <section className="mb-8 rounded-2xl border border-cyan-400/20 bg-[#121215] p-5" aria-labelledby="tracklist-heading">
           <h2 id="tracklist-heading" className="mb-4 text-lg font-bold text-white">ტრეკების სია</h2>
-          {childTracks.length === 0 ? <p className="text-sm text-gray-500">ამ ალბომში ტრეკები ჯერ არ არის.</p> : <ol className="divide-y divide-white/10">{childTracks.map((track, index) => <li key={String(track.id)} className="flex items-center gap-4 py-3"><span className="w-7 text-center text-sm font-bold text-cyan-300">{index + 1}</span><div className="min-w-0"><p className="truncate text-sm font-semibold text-white">{track.title}</p><p className="truncate text-xs text-gray-500">{track.artist}</p></div></li>)}</ol>}
+          {childTracks.length === 0 ? <p className="text-sm text-gray-500">ამ ალბომში ტრეკები ჯერ არ არის.</p> : <ol className="divide-y divide-white/10">{childTracks.map((track, index) => <li key={String(track.id)} className="flex items-center gap-4 py-3"><span className="w-7 text-center text-sm font-bold text-cyan-300">{index + 1}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">{track.title}</p><p className="truncate text-xs text-gray-500">{track.artist}</p></div><button type="button" onClick={() => playTrack(track)} aria-label={`${track.title} — მოსმენა`} className="rounded-full border border-cyan-300/30 p-2 text-cyan-200 transition hover:bg-cyan-300/10"><Play className="h-4 w-4" fill="currentColor" /></button></li>)}</ol>}
         </section>}
 
         {/* Divider */}
