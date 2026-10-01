@@ -1,0 +1,925 @@
+import { useState, useMemo, useEffect, useCallback, useRef, type MouseEvent } from 'react';
+import {
+  ChevronRight,
+  Play,
+  Music2,
+  Users,
+  Clock,
+  Sparkles,
+  Eraser,
+  Send,
+  CheckCircle2,
+  AlertTriangle,
+  BookOpen,
+  Gem,
+  TrendingUp,
+  MessageSquare,
+  Star,
+  Lock,
+  LogIn,
+} from 'lucide-react';
+import type { Release } from '@/types/music';
+import {
+  RZT_PARAMS,
+  VIBE_COEFFICIENTS,
+  VIBE_LEVELS,
+  REVIEW_RULES,
+  REVIEW_FORM_TABS,
+  computeRZTScore,
+  releaseTypeLabel,
+} from '@/types/music';
+import { useAuth } from '@/context/auth-context';
+import { supabase } from '@/lib/supabase';
+import RoleBadge, { VerificationBadge } from '@/components/RoleBadge';
+import { STRICT_VALUE_TIER_CONFIG, valueTierFromScore } from '@/lib/valueTier';
+
+interface ReleaseDetailProps {
+  release: Release | string | null;
+  onBack: () => void;
+  onOpenAuth: () => void;
+  onReviewSubmitted?: () => void;
+}
+
+type FormTab = (typeof REVIEW_FORM_TABS)[number]['id'];
+
+function valueTierHeading(releaseType?: string): string {
+  const normalized = String(releaseType ?? '').trim().toLowerCase();
+  if (normalized === 'single' || normalized === 'track' || normalized === 'სინგლი') return 'სინგლის ღირებულება';
+  if (normalized === 'ep') return 'EP-ის ღირებულება';
+  if (normalized === 'album' || normalized === 'ალბომი') return 'ალბომის ღირებულება';
+  return 'რელიზის ღირებულება';
+}
+
+function youtubeEmbedUrl(value?: string): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+    const id = host === 'youtu.be' ? url.pathname.split('/').filter(Boolean)[0] : host === 'youtube.com' || host === 'm.youtube.com' ? (url.searchParams.get('v') ?? url.pathname.split('/').filter(Boolean)[1]) : null;
+    return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : null;
+  } catch { return null; }
+}
+
+interface StoredReview {
+  id: string | number;
+  userId?: string;
+  title: string;
+  body: string;
+  totalScore: number;
+  createdAt: string;
+  username: string;
+  role: string;
+  authorCategory?: string;
+  isVerified: boolean;
+  authorLikes: number;
+}
+
+function normalizeRelease(row: Record<string, unknown>): Release {
+  const score = Number(row.score ?? row.total_score ?? 0);
+  return {
+    id: typeof row.id === 'number' ? row.id : String(row.id ?? ''),
+    title: String(row.title ?? ''),
+    artist: String(row.artist ?? row.artist_name ?? ''),
+    coverUrl: String(row.cover_url ?? row.coverUrl ?? ''),
+    type: String(row.release_type ?? row.type ?? '') as Release['type'],
+    release_type: row.release_type ? String(row.release_type) : undefined,
+    year: Number(row.year ?? new Date().getFullYear()),
+    score,
+    valueTier: typeof row.value_tier === 'string' ? row.value_tier : undefined,
+    score_community: row.score_community == null ? undefined : Number(row.score_community),
+    community_score: row.community_score == null ? undefined : Number(row.community_score),
+    score_critics: row.score_critics == null ? undefined : Number(row.score_critics),
+    critics_score: row.critics_score == null ? undefined : Number(row.critics_score),
+    reviewCount: Number(row.review_count ?? row.reviewCount ?? 0),
+    reviews_count: Number(row.reviews_count ?? row.review_count ?? row.reviewCount ?? 0),
+    value_tier: typeof row.value_tier === 'string' ? row.value_tier : undefined,
+    trackCount: Number(row.track_count ?? row.trackCount ?? 0),
+    genre: String(row.genre ?? ''),
+    season: row.season ? String(row.season) : undefined,
+    youtube_url: row.youtube_url ? String(row.youtube_url) : undefined,
+    streaming_url: row.streaming_url ? String(row.streaming_url) : undefined,
+    audio_url: row.audio_url ? String(row.audio_url) : undefined,
+    scores: {
+      community: Number(row.community_score ?? score - 2),
+      critics: Number(row.critics_score ?? score - 3),
+      personal: Number(row.personal_score ?? score),
+    },
+  };
+}
+
+function fallbackRelease(candidate: Release | string | null): Release | null {
+  return candidate && typeof candidate !== 'string' ? candidate : null;
+}
+
+export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSubmitted }: ReleaseDetailProps) {
+  const { isAuthenticated, user } = useAuth();
+  const [params, setParams] = useState<number[]>([5, 5, 5, 5]);
+  const [vibeLevel, setVibeLevel] = useState(3);
+  const [formTab, setFormTab] = useState<FormTab>('review');
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewText, setReviewText] = useState('');
+  const [mediaUrl, setMediaUrl] = useState('');
+  const [previewImageUrl, setPreviewImageUrl] = useState('');
+  const [authorLikedReviewIds, setAuthorLikedReviewIds] = useState<Set<string>>(new Set());
+  const [authorCommentText, setAuthorCommentText] = useState('');
+  const [authorCommentMessage, setAuthorCommentMessage] = useState('');
+  const [storedReviews, setStoredReviews] = useState<StoredReview[]>([]);
+  const [reviewError, setReviewError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [audioMessage, setAudioMessage] = useState('');
+  const [youtubePlayerUrl, setYoutubePlayerUrl] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [loadedRelease, setLoadedRelease] = useState<Release | null>(() => fallbackRelease(release));
+
+  useEffect(() => {
+    if (release && typeof release !== 'string') setLoadedRelease(release);
+    const selectedId = typeof release === 'string' ? release : release?.id ? String(release.id) : undefined;
+    const client = supabase;
+    if (!selectedId || !client) {
+      setLoadedRelease(fallbackRelease(release));
+      return;
+    }
+
+    let cancelled = false;
+    const loadRelease = async () => {
+      // The selected value may be a Supabase UUID. Keep it as a string and
+      // query the database directly instead of coercing it to a number.
+      const { data: selectedRow } = await client
+        .from('releases')
+        .select('*')
+        .eq('is_active', true)
+        .eq('id', selectedId)
+        .maybeSingle();
+
+      if (selectedRow) {
+        if (!cancelled) setLoadedRelease(normalizeRelease(selectedRow as Record<string, unknown>));
+        return;
+      }
+
+      // If the requested UUID is stale, use the canonical fallback from the
+      // database first, then the first available row in the database.
+      const { data: crisisRow } = await client
+        .from('releases')
+        .select('*')
+        .eq('is_active', true)
+        .eq('title', 'CRISIS MANAGEMENT')
+        .maybeSingle();
+
+      if (crisisRow) {
+        if (!cancelled) setLoadedRelease(normalizeRelease(crisisRow as Record<string, unknown>));
+        return;
+      }
+
+      let { data: firstRow } = await client
+        .from('releases')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (!firstRow) {
+        const fallbackQuery = await client.from('releases').select('*').eq('is_active', true).limit(1).maybeSingle();
+        firstRow = fallbackQuery.data;
+      }
+
+      if (!cancelled) {
+        setLoadedRelease(firstRow
+          ? normalizeRelease(firstRow as Record<string, unknown>)
+          : fallbackRelease(release));
+      }
+    };
+
+    void loadRelease();
+    return () => { cancelled = true; };
+  }, [release]);
+
+  const activeRelease = loadedRelease;
+
+  const totalScore = useMemo(
+    () => computeRZTScore(params, vibeLevel),
+    [params, vibeLevel],
+  );
+
+  const charCount = reviewText.length;
+  const charMin = 300;
+  const charMax = 8500;
+  const charWarning = charCount > 0 && charCount < charMin;
+  const charOver = charCount > charMax;
+
+  const canSubmit =
+    isAuthenticated &&
+    (formTab !== 'review' ||
+      (reviewTitle.trim().length > 0 && charCount >= charMin && charCount <= charMax));
+  const isMediaUser = user?.role === 'media' || user?.role === 'admin';
+
+  const loadReviews = useCallback(async () => {
+    if (!supabase || !activeRelease) {
+      setStoredReviews([]);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('reviews')
+      .select('*, profiles:user_id(display_name, role, author_category, is_verified)')
+      .eq('release_id', activeRelease.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      setReviewError(error.message);
+      return;
+    }
+
+    setReviewError('');
+    const mappedReviews = (data ?? []).map((row) => {
+      const item = row as Record<string, unknown>;
+      const profile = (item.profiles ?? item.profile) as Record<string, unknown> | null | undefined;
+      const metadata = item.user_metadata as Record<string, unknown> | null | undefined;
+      const isCurrentUser = item.user_id === user?.id;
+      return {
+        id: String(item.id ?? crypto.randomUUID()),
+        userId: item.user_id ? String(item.user_id) : undefined,
+        title: String(item.title ?? 'რეცენზია'),
+        body: String(item.content ?? item.body ?? item.text ?? item.review_text ?? item.excerpt ?? ''),
+        totalScore: Number(item.total_score ?? 0),
+        createdAt: String(item.created_at ?? ''),
+        username: String(profile?.display_name ?? item.user_display_name ?? item.username ?? item.display_name ?? metadata?.display_name ?? (isCurrentUser ? user?.displayName : undefined) ?? 'მომხმარებელი'),
+        role: String(profile?.role ?? 'user'),
+        authorCategory: profile?.author_category ? String(profile.author_category) : undefined,
+        isVerified: Boolean(profile?.is_verified),
+        authorLikes: Number(item.author_like_count ?? 0),
+      };
+    });
+    const reviewIds = mappedReviews.map((review) => String(review.id));
+    if (reviewIds.length > 0) {
+      const { data: likeRows } = await supabase.from('review_author_likes').select('review_id').in('review_id', reviewIds);
+      const likeCounts = new Map<string, number>();
+      (likeRows ?? []).forEach((row) => {
+        const id = String((row as Record<string, unknown>).review_id);
+        likeCounts.set(id, (likeCounts.get(id) ?? 0) + 1);
+      });
+      mappedReviews.forEach((review) => { review.authorLikes = likeCounts.get(String(review.id)) ?? review.authorLikes; });
+    }
+    setStoredReviews(mappedReviews);
+    if ((user?.role === 'author' || user?.role === 'artist' || user?.role === 'admin') && user.id) {
+      const { data: likes } = await supabase.from('review_author_likes').select('review_id').eq('user_id', user.id);
+      setAuthorLikedReviewIds(new Set((likes ?? []).map((row) => String((row as Record<string, unknown>).review_id))));
+    } else setAuthorLikedReviewIds(new Set());
+  }, [activeRelease, user?.displayName, user?.id, user?.role]);
+
+  useEffect(() => {
+    void loadReviews();
+  }, [loadReviews]);
+
+  const userPersonalReview = storedReviews.find((review) => review.userId === user?.id);
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client || !activeRelease) return;
+    let cancelled = false;
+    const refreshRelease = async () => {
+      const { data } = await client.from('releases').select('*').eq('id', activeRelease.id).maybeSingle();
+      if (!cancelled && data) setLoadedRelease(normalizeRelease(data as Record<string, unknown>));
+    };
+    const channel = client
+      .channel(`release-reviews-${String(activeRelease.id)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews', filter: `release_id=eq.${activeRelease.id}` }, () => {
+        void Promise.all([loadReviews(), refreshRelease()]);
+      })
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void client.removeChannel(channel);
+    };
+  }, [activeRelease, loadReviews]);
+
+  const handleParamChange = (index: number, value: number) => {
+    setParams((prev) => prev.map((p, i) => (i === index ? value : p)));
+  };
+
+  const toggleAuthorLike = async (reviewId: string) => {
+    if (!supabase || !user || (user.role !== 'author' && user.role !== 'artist' && user.role !== 'admin')) return;
+    const alreadyLiked = authorLikedReviewIds.has(reviewId);
+    const result = alreadyLiked
+      ? await supabase.from('review_author_likes').delete().eq('review_id', reviewId).eq('user_id', user.id)
+      : await supabase.from('review_author_likes').insert({ review_id: reviewId, user_id: user.id });
+    if (result.error) return;
+    setAuthorLikedReviewIds((previous) => { const next = new Set(previous); if (alreadyLiked) next.delete(reviewId); else next.add(reviewId); return next; });
+  };
+
+  const submitAuthorComment = async () => {
+    if (!supabase || !user || !activeRelease || !authorCommentText.trim()) return;
+    if (user.role !== 'author' && user.role !== 'artist' && user.role !== 'admin') return;
+    const { error } = await supabase.from('author_comments').insert({ release_id: activeRelease.id, user_id: user.id, author_name: user.displayName, content: authorCommentText.trim() });
+    setAuthorCommentMessage(error ? 'კომენტარის გამოქვეყნება ვერ მოხერხდა.' : 'კომენტარი გამოქვეყნდა.');
+    if (!error) setAuthorCommentText('');
+  };
+
+  const handleClear = () => {
+    setReviewTitle('');
+    setReviewText('');
+    setMediaUrl('');
+    setPreviewImageUrl('');
+  };
+
+  const persistReleaseScore = async (reviewScore: number) => {
+    if (!supabase || !activeRelease || !user) return;
+    const isCriticsReview = user.role === 'admin' || user.role === 'media';
+    let aggregateScore = reviewScore;
+    if (!isCriticsReview) {
+      const { data } = await supabase.from('reviews').select('total_score, profiles:user_id(role)').eq('release_id', activeRelease.id);
+      const communityScores = (data ?? []).map((row) => {
+        const item = row as Record<string, unknown>;
+        const profile = Array.isArray(item.profiles) ? item.profiles[0] as Record<string, unknown> | undefined : item.profiles as Record<string, unknown> | undefined;
+        return ['user', 'author'].includes(String(profile?.role ?? '')) ? Number(item.total_score ?? 0) : null;
+      }).filter((score): score is number => score !== null);
+      if (communityScores.length > 0) aggregateScore = Math.round(communityScores.reduce((sum, score) => sum + score, 0) / communityScores.length);
+    }
+    const tier = valueTierFromScore(aggregateScore);
+    const changes = isCriticsReview
+      ? { critics_score: reviewScore, score_critics: reviewScore, value_tier: tier }
+      : { community_score: aggregateScore, score_community: aggregateScore, value_tier: tier };
+    let { error } = await supabase.from('releases').update(changes).eq('id', activeRelease.id);
+    if (error && /column|schema cache|could not find/i.test(error.message)) {
+      const fallbackChanges = isCriticsReview ? { score_critics: reviewScore, value_tier: tier } : { score_community: aggregateScore, value_tier: tier };
+      ({ error } = await supabase.from('releases').update(fallbackChanges).eq('id', activeRelease.id));
+    }
+    if (!error) setLoadedRelease((current) => current ? { ...current, ...changes, score: aggregateScore, valueTier: tier, value_tier: tier } : current);
+  };
+
+  const handleSubmit = async () => {
+    if (!canSubmit || !user || !supabase || !activeRelease) {
+      if (!supabase) setReviewError('Supabase ჯერ არ არის კონფიგურირებული');
+      return;
+    }
+    if (charCount < charMin || charCount > charMax) {
+      setReviewError(`რეცენზიის ტექსტი უნდა იყოს ${charMin}-დან ${charMax} სიმბოლომდე`);
+      return;
+    }
+
+    setIsSubmitting(true);
+    setReviewError('');
+    const { data: authData } = await supabase.auth.getUser();
+    const authenticatedUser = authData.user;
+    if (!authenticatedUser) {
+      setIsSubmitting(false);
+      setReviewError('გთხოვთ, ხელახლა გაიაროთ ავტორიზაცია');
+      return;
+    }
+
+    const displayName = user.displayName || String(authenticatedUser.user_metadata?.display_name ?? authenticatedUser.email?.split('@')[0] ?? 'მომხმარებელი');
+    const reviewPayload = {
+      release_id: activeRelease.id,
+      user_id: authenticatedUser.id,
+      title: reviewTitle.trim(),
+      content: reviewText.trim(),
+      rhymes: params[0],
+      structure: params[1],
+      style: params[2],
+      individuality: params[3],
+      vibe: vibeLevel,
+      total_score: totalScore,
+      media_url: isMediaUser && mediaUrl.trim() ? mediaUrl.trim() : null,
+      preview_image_url: isMediaUser && previewImageUrl.trim() ? previewImageUrl.trim() : null,
+      is_media_review: isMediaUser,
+      user_display_name: displayName,
+      author_name: displayName,
+    };
+    const existingReview = storedReviews.find((review) => review.userId === authenticatedUser.id);
+    let { error } = existingReview
+      ? await supabase.from('reviews').update(reviewPayload).eq('id', existingReview.id)
+      : await supabase.from('reviews').insert(reviewPayload);
+    if (error && /column|schema cache|could not find/i.test(error.message)) {
+      const basePayload: Record<string, unknown> = { ...reviewPayload };
+      delete basePayload.user_display_name;
+      delete basePayload.author_name;
+      ({ error } = existingReview
+        ? await supabase.from('reviews').update(basePayload).eq('id', existingReview.id)
+        : await supabase.from('reviews').insert(basePayload));
+    }
+    setIsSubmitting(false);
+
+    if (error) {
+      setReviewError(error.message);
+      return;
+    }
+
+    await persistReleaseScore(totalScore);
+
+    handleClear();
+    setParams([5, 5, 5, 5]);
+    setVibeLevel(3);
+    await loadReviews();
+    const { data: refreshedRelease } = await supabase.from('releases').select('*').eq('id', activeRelease.id).maybeSingle();
+    if (refreshedRelease) setLoadedRelease(normalizeRelease(refreshedRelease as Record<string, unknown>));
+    onReviewSubmitted?.();
+  };
+
+  useEffect(() => {
+    if (audioUrl && audioRef.current) void audioRef.current.play().catch(() => undefined);
+  }, [audioUrl]);
+
+  if (!activeRelease) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0c] px-4 py-20 text-center text-gray-500 animate-slide-in">
+        <p>რელიზი ვერ მოიძებნა.</p>
+        <button onClick={onBack} className="mt-4 rounded-lg border border-[#2a2a32] px-4 py-2 text-sm text-gray-300 transition-colors hover:border-cyan-400/50 hover:text-cyan-300">უკან დაბრუნება</button>
+      </div>
+    );
+  }
+
+  const scores = { community: activeRelease.score_community || activeRelease.scores?.community || '—', critics: activeRelease.score_critics || activeRelease.scores?.critics || '—', personal: activeRelease.personalScore || activeRelease.scores?.personal || '—' };
+  const hasCommunityReviews = storedReviews.some((review) => ['user', 'author', 'artist'].includes(review.role));
+  const reviewCount = storedReviews.length || Number(activeRelease.reviewCount ?? activeRelease.reviews_count ?? 0);
+  const boundCommunityScore = hasCommunityReviews && Number(activeRelease.community_score ?? activeRelease.score_community ?? activeRelease.scores?.community ?? 0) > 0 ? Number(activeRelease.community_score ?? activeRelease.score_community ?? activeRelease.scores?.community) : '—';
+  const boundCriticsScore = Number(activeRelease.critics_score ?? activeRelease.score_critics ?? activeRelease.scores?.critics ?? 0) > 0 ? Number(activeRelease.critics_score ?? activeRelease.score_critics ?? activeRelease.scores?.critics) : '—';
+  const boundReleaseTier = valueTierFromScore(Number(activeRelease.community_score ?? activeRelease.score_community ?? activeRelease.scores?.community ?? 0));
+  const releaseTierConfig = STRICT_VALUE_TIER_CONFIG[boundReleaseTier];
+  const normalizedReleaseType = String(activeRelease.release_type ?? activeRelease.type ?? '').trim().toLowerCase();
+  const displayedTrackCount = normalizedReleaseType === 'single' || normalizedReleaseType === 'track' || normalizedReleaseType === 'სინგლი'
+    ? Math.max(1, activeRelease.trackCount)
+    : activeRelease.trackCount;
+  const handleListen = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    const embedUrl = youtubeEmbedUrl(activeRelease.youtube_url);
+    if (embedUrl) {
+      setYoutubePlayerUrl(embedUrl);
+      setAudioUrl(null);
+      return;
+    }
+    const playableAudioUrl = activeRelease.audio_url || activeRelease.streaming_url;
+    if (playableAudioUrl) {
+      setAudioUrl(playableAudioUrl);
+      setYoutubePlayerUrl(null);
+      return;
+    }
+    setAudioMessage('მოსასმენი ბმული მალე დაემატება');
+    window.setTimeout(() => setAudioMessage(''), 3200);
+  };
+  const scoreColor = (s: number) =>
+    s >= 90 ? 'text-cyan-300 border-cyan-400/30 bg-cyan-400/10' :
+    s >= 80 ? 'text-violet-300 border-violet-400/30 bg-violet-400/10' :
+    'text-gray-300 border-gray-500/30 bg-gray-500/10';
+
+  return (
+    <div className="relative min-h-screen bg-[#0a0a0c] animate-slide-in">
+      {audioMessage && <div role="status" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-cyan-400/30 bg-[#121215] px-4 py-3 text-sm font-semibold text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.2)]">{audioMessage}</div>}
+      {youtubePlayerUrl && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true"><div className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-cyan-400/30 bg-[#121215] shadow-2xl"><button type="button" onClick={(event) => { event.stopPropagation(); setYoutubePlayerUrl(null); }} className="absolute right-3 top-2 z-10 rounded-full bg-black/70 px-3 py-1 text-xl text-white" aria-label="დახურვა">×</button><div className="aspect-video"><iframe src={youtubePlayerUrl} title={activeRelease.title} className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div></div></div>}
+      {audioUrl && <div className="fixed bottom-5 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-cyan-400/30 bg-[#121215] p-3 shadow-2xl"><audio ref={audioRef} src={audioUrl} controls autoPlay className="h-8" /><button type="button" onClick={(event) => { event.stopPropagation(); setAudioUrl(null); }} className="text-lg text-gray-400 hover:text-white" aria-label="დახურვა">×</button></div>}
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        {/* Breadcrumbs */}
+        <nav className="mb-6 flex items-center gap-2 text-sm">
+          <button
+            onClick={onBack}
+            className="text-gray-500 transition-colors hover:text-cyan-400"
+          >
+            მთავარი
+          </button>
+          <ChevronRight className="h-3.5 w-3.5 text-gray-700" />
+          <span className="text-gray-500">რელიზები</span>
+          <ChevronRight className="h-3.5 w-3.5 text-gray-700" />
+              <span className="text-gray-300 truncate">{activeRelease.title}</span>
+        </nav>
+
+        {/* Release Header */}
+        <div className="mb-10 flex flex-col gap-6 sm:flex-row sm:items-start">
+          {/* Cover */}
+          <div className="relative shrink-0">
+            <div className="h-48 w-48 overflow-hidden rounded-2xl border border-[#2a2a32] sm:h-56 sm:w-56">
+              <img
+                src={activeRelease.coverUrl}
+                alt={activeRelease.title}
+                className="h-full w-full object-cover"
+              />
+            </div>
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            {/* Badges */}
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-300">
+                {releaseTypeLabel(activeRelease)}
+              </span>
+              {activeRelease.season && (
+                <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs font-medium text-violet-300">
+                  {activeRelease.season}
+                </span>
+              )}
+              <span className="rounded-full border border-[#2a2a32] px-3 py-1 text-xs font-medium text-gray-400">
+                {activeRelease.year} · {activeRelease.genre}
+              </span>
+            </div>
+
+            {/* Title & artist */}
+            <h1 className="text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+              {activeRelease.title}
+            </h1>
+            <p className="mt-1.5 text-lg text-gray-400">{activeRelease.artist}</p>
+
+            {/* Streaming button */}
+            <div className="mt-4 flex items-center gap-3">
+              <button type="button" onClick={handleListen} className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 px-5 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-90">
+                <Play className="h-4 w-4" fill="currentColor" />
+                მოსმენა
+              </button>
+              <div className="flex items-center gap-4 text-xs text-gray-500">
+                <span className="flex items-center gap-1">
+                  <Music2 className="h-3.5 w-3.5" />
+                  {displayedTrackCount} ტრეკი
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="h-3.5 w-3.5" />
+                  {reviewCount} რეცენზია
+                </span>
+              </div>
+            </div>
+
+            {/* Triple score pills */}
+            <div className="mt-6">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-600">შეფასებები</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(boundCommunityScore))}`}>
+                  <span className="text-2xl font-extrabold leading-none">{boundCommunityScore}</span>
+                  <span className="text-[10px] font-medium text-gray-500">საზოგადოება</span>
+                </div>
+                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(boundCriticsScore))}`}>
+                  <span className="text-2xl font-extrabold leading-none">{boundCriticsScore}</span>
+                  <span className="text-[10px] font-medium text-gray-500">კრიტიკოსები</span>
+                </div>
+                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(scores.personal))}`}>
+                  <span className="text-2xl font-extrabold leading-none">{userPersonalReview?.totalScore ?? '—'}</span>
+                  <span className="text-[10px] font-medium text-gray-500">პერსონალური</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Value tier banner */}
+            <div className={`mt-5 flex items-center gap-3 rounded-xl px-5 py-3 ${releaseTierConfig.badge}`}>
+              <Gem className={`h-5 w-5 ${releaseTierConfig.icon}`} />
+              <div>
+                <p className="text-xs text-gray-400">{valueTierHeading(activeRelease.release_type ?? activeRelease.type)}</p>
+                <p className="text-lg font-extrabold">{boundReleaseTier}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div className="mb-8 h-px bg-[#1e1e24]" />
+
+        {/* Auth lock banner */}
+        {!isAuthenticated && (
+          <div className="mb-6 flex flex-col items-center justify-between gap-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 sm:flex-row">
+            <div className="flex items-center gap-3">
+              <Lock className="h-5 w-5 shrink-0 text-amber-400" />
+              <p className="text-sm text-amber-200/90">
+                სამუშაოს შეფასება შეუძლიათ პლატფორმის წევრებს. ქულების დასაწერად და რეცენზიის გასაგზავნად გაიარეთ ავტორიზაცია
+              </p>
+            </div>
+            <button
+              onClick={onOpenAuth}
+              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 px-5 py-2 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan shrink-0"
+            >
+              <LogIn className="h-4 w-4" />
+              შესვლა
+            </button>
+          </div>
+        )}
+
+        {/* Authenticated user banner */}
+        {isAuthenticated && user && (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-5 py-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-400/10">
+              {user.isVerified ? (
+                <VerificationBadge />
+              ) : (
+                <CheckCircle2 className="h-5 w-5 text-cyan-400" />
+              )}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-white">
+                შესული ხართ როგორც {user.displayName}
+              </p>
+              <p className="text-xs text-gray-400">
+                {user.role === 'artist' ? 'ვერიფიცირებული ავტორი — შეფასება და რეცენზია ხელმისაწვდომია' : 'მომხმარებელი — შეფასება და რეცენზია ხელმისაწვდომია'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Two-column layout: Evaluation + Review form */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+          {/* Left: Stage 90 Evaluation */}
+          <div className="space-y-5">
+            <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-6">
+              <div className="mb-5 flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-cyan-400/10">
+                  <TrendingUp className="h-4 w-4 text-cyan-400" />
+                </span>
+                <h2 className="text-lg font-bold text-white">STAGE 90 შეფასების სისტემა</h2>
+              </div>
+
+              {/* Score display */}
+              <div className="mb-6 flex flex-col items-center">
+                <div className="score-pulse relative flex h-32 w-32 items-center justify-center rounded-full border-2 border-cyan-400/30 bg-gradient-to-br from-cyan-400/10 to-violet-500/10">
+                  <div className="text-center">
+                    <span className="block text-4xl font-extrabold text-cyan-300 text-glow-cyan leading-none">
+                      {totalScore}
+                    </span>
+                    <span className="text-xs font-medium text-gray-500">/ 90</span>
+                  </div>
+                </div>
+                <div className={`mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 ${releaseTierConfig.badge}`}>
+                  <Gem className={`h-3.5 w-3.5 ${releaseTierConfig.icon}`} />
+                  <span className="text-sm font-bold">{boundReleaseTier}</span>
+                </div>
+              </div>
+
+              {/* Base parameters */}
+              <div className="space-y-4">
+                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">ფუძე პარამეტრები (1-10)</p>
+                {RZT_PARAMS.map((param, index) => (
+                  <div key={param.id}>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <label className="text-sm text-gray-300">{param.label}</label>
+                      <span className="text-sm font-bold text-cyan-400">{params[index]}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={1}
+                      max={10}
+                      step={1}
+                      value={params[index]}
+                      onChange={(e) => handleParamChange(index, Number(e.target.value))}
+                      disabled={!isAuthenticated}
+                      className="rzt-slider disabled:opacity-40 disabled:cursor-not-allowed"
+                      style={{ ['--fill' as string]: `${((params[index] - 1) / 9) * 100}%` }}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Divider */}
+              <div className="my-5 h-px bg-[#1e1e24]" />
+
+              {/* Vibe parameter */}
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <label className="text-sm text-gray-300">ატმოსფერო / ვაიბი</label>
+                  <span className="text-sm font-bold text-violet-400">
+                    {VIBE_LEVELS[vibeLevel - 1]}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={vibeLevel}
+                  onChange={(e) => setVibeLevel(Number(e.target.value))}
+                  disabled={!isAuthenticated}
+                  className="rzt-vibe-slider disabled:opacity-40 disabled:cursor-not-allowed"
+                  style={{ ['--fill' as string]: `${((vibeLevel - 1) / 4) * 100}%` }}
+                />
+                <div className="mt-2 flex justify-between text-[10px] text-gray-600">
+                  {VIBE_LEVELS.map((level, i) => (
+                    <span
+                      key={level}
+                      className={vibeLevel === i + 1 ? 'font-bold text-violet-400' : ''}
+                    >
+                      {i + 1}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-gray-500">
+                  კოეფიციენტი: <span className="font-mono text-violet-400">{VIBE_COEFFICIENTS[vibeLevel - 1].toFixed(4)}</span>
+                </p>
+              </div>
+
+              {/* Formula display */}
+              <div className="mt-5 rounded-lg border border-[#1e1e24] bg-[#0a0a0c] p-3">
+                <p className="text-[11px] text-gray-500">
+                  ფორმულა: ({params.join(' + ')}) × 1.4 × {VIBE_COEFFICIENTS[vibeLevel - 1].toFixed(4)} ={' '}
+                  <span className="font-bold text-cyan-400">{totalScore}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Right: Review form */}
+          <div className="space-y-5">
+            {/* Form tabs */}
+            <div className="flex items-center gap-1 rounded-xl border border-[#1e1e24] bg-[#121215] p-1">
+              {REVIEW_FORM_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setFormTab(tab.id)}
+                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                    formTab === tab.id
+                      ? 'bg-cyan-400/10 text-cyan-400'
+                      : 'text-gray-500 hover:text-gray-300'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-[200px_1fr]">
+              {/* Rules sidebar */}
+              <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-violet-400" />
+                  <h3 className="text-sm font-bold text-white">რეცენზიის წესები</h3>
+                </div>
+                <ul className="space-y-2.5">
+                  {REVIEW_RULES.map((rule, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-400/60" />
+                      <span className="text-xs leading-relaxed text-gray-400">{rule}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Form inputs */}
+              <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-5">
+                {userPersonalReview && <div className="mb-4 rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-xs text-cyan-200">თქვენ უკვე შეაფასეთ ეს რელიზი — ხელახლა გაგზავნა შეცვლის არსებულ შეფასებას.</div>}
+                {formTab === 'review' && (
+                  <div className="space-y-4">
+                    {/* Title input */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-300">
+                        რეცენზიის სათაური
+                      </label>
+                      <input
+                        type="text"
+                        value={reviewTitle}
+                        onChange={(e) => setReviewTitle(e.target.value)}
+                        disabled={!isAuthenticated}
+                        placeholder={isAuthenticated ? 'შეიყვანეთ სათაური...' : 'ავტორიზაცია საჭიროა'}
+                        className="w-full rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 transition-colors focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                      />
+                    </div>
+
+                    {/* Textarea */}
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-300">
+                        რეცენზიის ტექსტი (300-დან 8500 სიმბოლომდე)
+                      </label>
+                      <textarea
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        minLength={charMin}
+                        maxLength={charMax}
+                        disabled={!isAuthenticated}
+                        placeholder={isAuthenticated ? 'დაწერეთ თქვენი რეცენზია აქ...' : 'ავტორიზაცია საჭიროა'}
+                        rows={8}
+                        className="w-full resize-none rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-3 text-sm leading-relaxed text-gray-200 placeholder-gray-600 transition-colors focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                      />
+                      {/* Character counter */}
+                      <div className="mt-2 flex items-center justify-between text-xs">
+                        <span
+                          className={`rounded-full border px-2 py-0.5 ${
+                            charWarning ? 'text-amber-400' :
+                            charOver ? 'text-rose-400' :
+                            'text-gray-500'
+                          }`}
+                        >
+                          {charCount} / {charMax}
+                        </span>
+                        {charWarning && (
+                          <span className="flex items-center gap-1 text-amber-400">
+                            <AlertTriangle className="h-3 w-3" />
+            მინიმუმ {charMin - charCount} სიმბოლო დარჩა
+                          </span>
+                        )}
+                        {charOver && (
+                          <span className="flex items-center gap-1 text-rose-400">
+                            <AlertTriangle className="h-3 w-3" />
+            ლიმიტი გადაცილებულია {charCount - charMax} სიმბოლოთი
+                          </span>
+                        )}
+                        {charCount >= charMin && charCount <= charMax && charCount > 0 && (
+                          <span className="flex items-center gap-1 text-emerald-400">
+                            <CheckCircle2 className="h-3 w-3" />
+            ტექსტი შეესაბამება მოთხოვნებს
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {isMediaUser && (
+                      <div className="space-y-3 rounded-lg border border-teal-400/20 bg-teal-400/5 p-3">
+                        <p className="text-xs font-semibold text-teal-300">მედიის დამატებითი ველები</p>
+                        <input value={mediaUrl} onChange={(event) => setMediaUrl(event.target.value)} disabled={!isAuthenticated} type="url" placeholder="ვიდეო გარჩევის ან სტატიის ბმული" className="w-full rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:border-teal-400/50 focus:outline-none" />
+                        <input value={previewImageUrl} onChange={(event) => setPreviewImageUrl(event.target.value)} disabled={!isAuthenticated} type="url" placeholder="პრევიუს სურათის ბმული" className="w-full rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-3 py-2 text-sm text-gray-200 placeholder-gray-600 focus:border-teal-400/50 focus:outline-none" />
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {formTab === 'rating-only' && (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Star className="mb-3 h-10 w-10 text-cyan-400/40" />
+                    <p className="text-sm text-gray-400">
+                      შეაფასეთ რელიზი STAGE 90 სისტემით რეცენზიის წერის გარეშე.
+                    </p>
+                    <p className="mt-1 text-xs text-gray-600">
+                      თქვენი ქულა: <span className="font-bold text-cyan-400">{totalScore} / 90</span>
+                    </p>
+                  </div>
+                )}
+
+                {formTab === 'value' && (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Gem className={`mb-3 h-10 w-10 ${releaseTierConfig.icon}`} />
+                    <p className="text-sm text-gray-400">ალბომის ღირებულების მინიჭება</p>
+                    <div className={`mt-3 flex items-center gap-2 rounded-xl px-6 py-3 ${releaseTierConfig.badge}`}>
+                      <span className="text-2xl font-extrabold">{boundReleaseTier}</span>
+                    </div>
+                    <p className="mt-3 text-xs text-gray-600">
+                      თქვენი შეფასების ქულა: <span className="font-bold text-cyan-400">{totalScore} / 90</span>
+                    </p>
+                  </div>
+                )}
+
+                {/* Action buttons */}
+                <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#1e1e24] pt-4">
+                  <button
+                    onClick={handleClear}
+                    className="flex items-center gap-1.5 rounded-lg border border-[#2a2a32] px-4 py-2 text-sm font-medium text-gray-400 transition-colors hover:border-gray-600 hover:text-gray-300"
+                  >
+                    <Eraser className="h-4 w-4" />
+                    მონახაზის გასუფთავება
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!canSubmit || isSubmitting}
+                    className={`flex items-center gap-1.5 rounded-lg px-6 py-2 text-sm font-bold transition-all ${
+                      canSubmit
+                        ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-black glow-cyan hover:opacity-90'
+                        : 'cursor-not-allowed border border-[#1e1e24] bg-[#121215] text-gray-600'
+                    }`}
+                  >
+                    <Send className="h-4 w-4" />
+                    {isSubmitting ? 'იგზავნება...' : 'გაგზავნა'}
+                  </button>
+                </div>
+                {reviewError && (
+                  <p className="mt-3 text-xs text-rose-400">{reviewError}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Existing reviews preview */}
+            <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-5">
+              <div className="mb-4 flex items-center gap-2.5">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-400/10">
+                  <MessageSquare className="h-4 w-4 text-violet-400" />
+                </span>
+                <h3 className="text-sm font-bold text-white">ცალკე აღებული რეცენზიები</h3>
+              </div>
+              <div className="space-y-3">
+                {storedReviews.length === 0 && (
+                  <p className="rounded-lg border border-[#1e1e24] p-4 text-xs text-gray-500">
+                    {reviewError ? 'რეცენზიების ჩატვირთვა ვერ მოხერხდა.' : 'ამ რელიზზე რეცენზიები ჯერ არ არის.'}
+                  </p>
+                )}
+                {storedReviews.map((review) => (
+                  <div key={review.id} className="flex min-w-0 max-w-full items-start gap-3 overflow-hidden rounded-lg border border-[#1e1e24] p-3">
+                    <img
+                      src={activeRelease.coverUrl}
+                      alt=""
+                      className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="flex min-w-0 items-center gap-2 text-sm font-bold text-white">
+                          <span className="truncate">{review.username}</span>
+                          <RoleBadge role={review.role} category={review.authorCategory} isVerified={review.isVerified} />
+                        </span>
+                        <span className="text-sm font-extrabold text-cyan-400">
+                          {review.totalScore}
+                        </span>
+                      </div>
+                      <p className="mt-1 break-words break-all overflow-hidden text-xs font-semibold text-gray-300 line-clamp-1">{review.title}</p>
+                      <p className="mt-1 break-words break-all overflow-hidden whitespace-pre-wrap text-xs leading-relaxed text-gray-500 line-clamp-2">{review.body}</p>
+                      {(user?.role === 'author' || user?.role === 'artist' || user?.role === 'admin') && <button onClick={() => void toggleAuthorLike(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${authorLikedReviewIds.has(String(review.id)) ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-200' : 'border-[#2a2a32] text-gray-400 hover:text-cyan-200'}`}>ავტორული მოწონება · {review.authorLikes + (authorLikedReviewIds.has(String(review.id)) ? 1 : 0)}</button>}
+                      <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-600">
+                        <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{review.createdAt ? new Date(review.createdAt).toLocaleDateString('ka-GE') : 'ახლახან'}</span>
+                        <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" />STAGE 90 რეცენზია</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {(user?.role === 'author' || user?.role === 'artist' || user?.role === 'admin') && <div className="mt-4 border-t border-[#1e1e24] pt-4"><label htmlFor="author-review-comment" className="mb-2 block text-xs font-semibold text-cyan-200">ავტორული კომენტარი</label><div className="flex gap-2"><input id="author-review-comment" value={authorCommentText} onChange={(event) => setAuthorCommentText(event.target.value)} placeholder="დატოვეთ კომენტარი რელიზზე" className="min-w-0 flex-1 rounded-lg border border-[#2a2a32] bg-[#0a0a0c] px-3 py-2 text-xs text-white placeholder-gray-500" /><button onClick={() => void submitAuthorComment()} disabled={!authorCommentText.trim()} className="rounded-lg bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-40">გამოქვეყნება</button></div>{authorCommentMessage && <p className="mt-2 text-xs text-gray-400">{authorCommentMessage}</p>}</div>}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

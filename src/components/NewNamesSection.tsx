@@ -1,0 +1,18 @@
+import { useState } from 'react';
+import { Info, Sparkles, X } from 'lucide-react';
+import type { Release } from '@/types/music';
+
+interface NewNamesSectionProps { releases: Release[]; onReleaseClick: (release: Release) => void; }
+
+export default function NewNamesSection({ releases, onReleaseClick }: NewNamesSectionProps) {
+  const [showGuidelines, setShowGuidelines] = useState(false);
+  const newNames = releases.filter((release) => release.is_new_name === true || release.is_freshman === true).slice(-6).reverse();
+  if (newNames.length === 0) return null;
+  return <>
+    <section className="animate-fade-in" aria-labelledby="new-names-heading" style={{ animationDelay: '0.2s' }}>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div className="flex items-center gap-3"><h2 id="new-names-heading" className="text-xl font-bold text-white sm:text-2xl">ახალი სახელები</h2><button type="button" onClick={() => setShowGuidelines(true)} aria-label="რა არის ახალი სახელები" className="rounded-full border border-cyan-400/20 bg-cyan-400/10 p-1.5 text-cyan-300 transition-colors hover:border-cyan-400/40 hover:text-cyan-200"><Info className="h-3.5 w-3.5" /></button></div><button className="text-sm font-medium text-gray-500 transition-colors hover:text-cyan-400">ყველა რელიზი →</button></div>
+      <div className="no-scrollbar -mx-4 flex gap-4 overflow-x-auto px-4 pb-2 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-6">{newNames.map((release) => <button key={release.id} onClick={() => onReleaseClick(release)} className="group w-[150px] shrink-0 text-left sm:w-auto" aria-label={`${release.title} — ${release.artist}`}><div className="relative aspect-square overflow-hidden rounded-xl border border-[#1e1e24] bg-[#121215]"><img src={release.coverUrl} alt={release.title} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" /><div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-70" /><span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-[10px] font-bold text-cyan-300 backdrop-blur"><Sparkles className="h-3 w-3" />ახალი</span></div><h3 className="mt-3 truncate text-sm font-bold text-white transition-colors group-hover:text-cyan-300">{release.title}</h3><p className="mt-0.5 truncate text-xs text-gray-500">{release.artist}</p></button>)}</div>
+    </section>
+    {showGuidelines && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="new-names-guidelines"><div className="relative w-full max-w-lg rounded-2xl border border-[#2a2a32] bg-[#121215]/95 p-6 shadow-2xl"><button type="button" onClick={() => setShowGuidelines(false)} aria-label="დახურვა" className="absolute right-4 top-4 text-gray-500 hover:text-white"><X className="h-5 w-5" /></button><h2 id="new-names-guidelines" className="pr-8 text-xl font-bold text-white">რა არის ახალი სახელები?</h2><p className="mt-3 text-sm leading-relaxed text-gray-300">ეს სექცია მხარს უჭერს ახალ და დამოუკიდებელ ქართველ მუსიკოსებს, რომლებსაც საკუთარი ხმა და ახალი იდეები აქვთ.</p><div className="mt-5 space-y-3 text-sm leading-relaxed text-gray-400"><p>• მუსიკოსი ან ჯგუფი უნდა ქმნიდეს ორიგინალურ ქართულ მუსიკას.</p><p>• წარდგენილი უნდა იყოს დასრულებული ტრეკი ან რელიზი, მისი სათაურით, ავტორითა და მოსასმენი ბმულით.</p><p>• როტაციაში მოხვედრისას ვითვალისწინებთ ნამუშევრის ხარისხს, თვითმყოფადობას, აქტიურობასა და საზოგადოების ინტერესს.</p><p>• ახალი სახელების აღმოჩენა ხდება საზოგადოების მხარდაჭერითა და რედაქციის შერჩევით.</p></div></div></div>}
+  </>;
+}
