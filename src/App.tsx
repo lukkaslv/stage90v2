@@ -42,7 +42,7 @@ function AppContent() {
   const [userReviewsMap, setUserReviewsMap] = useState<Record<string, number>>({});
   const [maintenance, setMaintenance] = useState<MaintenanceSettings>(defaultMaintenanceSettings);
   const topCatalog = releaseCatalog;
-  const latestCatalog = releaseCatalog.length > 7 ? releaseCatalog.slice(7) : releaseCatalog;
+  const latestCatalog = releaseCatalog;
   const openRelease = (nextRelease: Release | string) => { void startTransition(() => setSelectedRelease(nextRelease)); };
   const handleRefresh = () => setRefreshKey((key) => key + 1);
 
@@ -259,7 +259,7 @@ function AppContent() {
                   ყველას ნახვა →
                 </button>
               </div>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+              <div onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="no-scrollbar flex gap-4 overflow-x-auto overflow-y-visible scroll-smooth select-none pb-2">
                 {latestCatalog.map((release) => (
                   <ReleaseCard key={release.id} release={release} onClick={openRelease} userReviewsMap={userReviewsMap} />
                 ))}

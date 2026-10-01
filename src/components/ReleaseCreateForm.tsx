@@ -4,7 +4,7 @@ import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 
 export type ReleaseCreated = { id: string | number; title: string; is_active: boolean; is_freshman: boolean; is_new_name: boolean };
-interface ReleaseCreateFormProps { onCreated?: (release: ReleaseCreated) => void; compact?: boolean; }
+interface ReleaseCreateFormProps { onCreated?: (release: ReleaseCreated) => void; onRefresh?: () => void; compact?: boolean; }
 const fieldClass = 'w-full rounded-lg border border-[#2a2a32] bg-[#0b0b0e] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-400/60';
 
 function extractYouTubeVideoId(value: string): string | null {
@@ -30,7 +30,7 @@ function cleanVideoTitle(rawTitle: string): { artist: string; title: string } {
   return { artist: '', title: cleaned };
 }
 
-export default function ReleaseCreateForm({ onCreated, compact = false }: ReleaseCreateFormProps) {
+export default function ReleaseCreateForm({ onCreated, onRefresh, compact = false }: ReleaseCreateFormProps) {
   const { user, refreshProfile } = useAuth();
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [youtubeId, setYoutubeId] = useState<string | null>(null);
@@ -81,7 +81,7 @@ export default function ReleaseCreateForm({ onCreated, compact = false }: Releas
     if (error) { setMessage({ text: `რელიზის დამატება ვერ მოხერხდა: ${error.message}`, error: true }); setSaving(false); return; }
     if (user.role === 'media') { const { error: quotaError } = await supabase.from('profiles').update({ media_monthly_releases: user.mediaMonthlyReleases + 1 }).eq('id', user.id); if (quotaError) setMessage({ text: `რელიზი დაემატა, თუმცა ლიმიტის განახლება ვერ მოხერხდა: ${quotaError.message}`, error: true }); await refreshProfile(); }
     setTitle(''); setArtist(''); setCoverUrl(''); setYoutubeUrl(''); setYoutubeId(null);
-    setMessage({ text: 'რელიზი წარმატებით დაემატა!' }); setSaving(false); if (data) onCreated?.(data as ReleaseCreated);
+    setMessage({ text: 'რელიზი წარმატებით დაემატა!' }); setSaving(false); if (data) { onCreated?.(data as ReleaseCreated); onRefresh?.(); }
   };
 
   const previewUrl = coverUrl || (youtubeId ? `https://img.youtube.com/vi/${youtubeId}/maxresdefault.jpg` : '');
