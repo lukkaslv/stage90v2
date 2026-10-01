@@ -22,6 +22,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
 import { LoadingProvider, usePageLoading } from '@/context/LoadingContext';
 import PageLoader from '@/components/PageLoader';
+import MaintenancePlaceholder from '@/components/MaintenancePlaceholder';
+import { defaultMaintenanceSettings, loadMaintenanceSettings, type MaintenanceSettings } from '@/lib/maintenance';
 
 type AuthMode = 'login' | 'register';
 
@@ -38,10 +40,15 @@ function AppContent() {
   const [releaseCount, setReleaseCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   const [userReviewsMap, setUserReviewsMap] = useState<Record<string, number>>({});
+  const [maintenance, setMaintenance] = useState<MaintenanceSettings>(defaultMaintenanceSettings);
   const topCatalog = releaseCatalog;
   const latestCatalog = releaseCatalog.length > 7 ? releaseCatalog.slice(7) : releaseCatalog;
   const openRelease = (nextRelease: Release | string) => { void startTransition(() => setSelectedRelease(nextRelease)); };
   const handleRefresh = () => setRefreshKey((key) => key + 1);
+
+  useEffect(() => {
+    void loadMaintenanceSettings().then(setMaintenance);
+  }, []);
 
   useEffect(() => {
     const client = supabase;
@@ -153,19 +160,20 @@ function AppContent() {
     <div className="min-h-screen bg-[#0a0a0c]">
       <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => void startTransition(() => setSelectedRelease(null))} activeTab={activeTab} onTabChange={(tab) => void startTransition(() => setActiveTab(tab))} onAdminOpen={() => void startTransition(() => setAdminMode(true))} />
       {showAbout && <PlatformAboutModal onClose={() => setShowAbout(false)} />}
-      {adminMode && user?.role === 'admin' ? <AdminDashboard onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /> : null}
+      {adminMode && user?.role === 'admin' ? <AdminDashboard maintenance={maintenance} onMaintenanceChange={setMaintenance} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /> : null}
 
-      {!adminMode && activeTab === 'top90' && <Top90Leaderboard />}
+      {!adminMode && maintenance[activeTab].enabled && <MaintenancePlaceholder tabTitle={({ releases: 'რელიზები', top90: 'ტოპ-90', achievements: 'მიღწევები', concerts: 'კონცერტები' }[activeTab])} customMessage={maintenance[activeTab].message} />}
+      {!adminMode && !maintenance[activeTab].enabled && activeTab === 'top90' && <Top90Leaderboard />}
 
-      {!adminMode && activeTab === 'achievements' && <Achievements />}
+      {!adminMode && !maintenance[activeTab].enabled && activeTab === 'achievements' && <Achievements />}
 
-      {!adminMode && activeTab === 'concerts' && (
+      {!adminMode && !maintenance[activeTab].enabled && activeTab === 'concerts' && (
         <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
           <ConcertsSection />
         </main>
       )}
 
-      {!adminMode && activeTab === 'releases' && (
+      {!adminMode && !maintenance[activeTab].enabled && activeTab === 'releases' && (
         <>
           {/* Hero banner */}
           <section className="relative overflow-hidden border-b border-[#1e1e24]">
