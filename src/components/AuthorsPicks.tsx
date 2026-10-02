@@ -2,7 +2,6 @@ import { useCallback, useMemo, useRef } from 'react';
 import { useSupabasePages } from '@/hooks/useSupabasePages';
 import { normalizeCatalogRelease } from '@/lib/normalizeCatalogRelease';
 import LoadMoreButton from '@/components/LoadMoreButton';
-import { selectColumns } from '@/lib/selectColumns';
 import { ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import type { Release } from '@/types/music';
 import { supabase } from '@/lib/supabase';
@@ -15,7 +14,7 @@ export default function AuthorsPicks({ releaseById, onReleaseClick, preview = fa
   const fetchPage = useCallback((from: number, to: number) => {
     if (!supabase) return Promise.resolve({ data: null, error: true });
     const client = supabase;
-    return selectColumns('author_picks', 'id, release_id, created_at, releases:release_id(id, title, artist_name, cover_url, release_type)', ['author_name', 'username', 'reactions', 'likes'], (columns) => client.from('author_picks').select(columns).order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to).returns<Record<string, unknown>[]>());
+    return client.from('author_picks').select('*, releases:release_id(id, title, artist_name, cover_url, release_type)').order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to).returns<Record<string, unknown>[]>();
   }, []);
   const { rows, loading, hasMore, error, loadMore } = useSupabasePages(fetchPage, preview ? 5 : 20);
   const picks = useMemo<AuthorPick[]>(() => rows.map((item) => {

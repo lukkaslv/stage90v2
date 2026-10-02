@@ -3,7 +3,6 @@ import { ExternalLink, Link2, MessageCircle } from 'lucide-react';
 import type { Release } from '@/types/music';
 import { supabase } from '@/lib/supabase';
 import RoleBadge from '@/components/RoleBadge';
-import { selectColumns } from '@/lib/selectColumns';
 import { normalizeCatalogRelease } from '@/lib/normalizeCatalogRelease';
 
 interface MediaReviewsProps { onReviewClick: (id: string) => void; releaseById: ReadonlyMap<string, Release>; refreshVersion?: number; }
@@ -17,7 +16,7 @@ export default function MediaReviews({ onReviewClick, releaseById, refreshVersio
     if (!client) return;
     let cancelled = false;
     const load = async () => {
-      const { data, error } = await selectColumns('reviews', 'id, release_id, title, content, total_score, rhymes, structure, style, individuality, vibe, profiles:user_id(display_name, role, author_category, is_verified), releases:release_id(id, title, artist_name, cover_url, release_type)', ['is_media_review', 'preview_image_url', 'media_url', 'user_display_name', 'comment_count'], (columns) => client.from('reviews').select(columns).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(12).returns<Record<string, unknown>[]>());
+      const { data, error } = await client.from('reviews').select('*, profiles:user_id(display_name, role, author_category, is_verified), releases:release_id(id, title, artist_name, cover_url, release_type)').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(12).returns<Record<string, unknown>[]>();
       if (cancelled || error) return;
       const mediaRows = (data ?? []).filter((row) => { const item = row as Record<string, unknown>; const profile = joined(item.profiles); return item.is_media_review === true || profile?.role === 'media'; });
       setReviews(mediaRows.map((row, index) => {

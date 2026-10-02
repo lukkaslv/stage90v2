@@ -2,7 +2,6 @@ import { useCallback, useMemo } from 'react';
 import { useSupabasePages } from '@/hooks/useSupabasePages';
 import { queryCatalog } from '@/lib/catalogQuery';
 import { normalizeCatalogRelease } from '@/lib/normalizeCatalogRelease';
-import { selectColumns } from '@/lib/selectColumns';
 import { supabase } from '@/lib/supabase';
 import type { Release } from '@/types/music';
 import ReleaseCard from '@/components/ReleaseCard';
@@ -33,25 +32,23 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
       });
     }
     if (section === 'author-picks') {
-      return selectColumns('author_picks', 'id, release_id, created_at, releases:release_id(id, title, artist_name, cover_url, release_type)', ['author_name', 'username', 'reactions', 'likes'], (columns) => client.from('author_picks').select(columns)
+      return client.from('author_picks').select('*, releases:release_id(id, title, artist_name, cover_url, release_type)')
         .order('created_at', { ascending: false }).order('id', { ascending: false })
-        .range(from, to).returns<Record<string, unknown>[]>());
+        .range(from, to).returns<Record<string, unknown>[]>();
     }
     if (section === 'author-comments') {
-      return selectColumns('author_comments', 'id, release_id, created_at', ['content', 'comment', 'text', 'author_name', 'username'], (columns) => client.from('author_comments').select(columns)
+      return client.from('author_comments').select('*')
         .order('created_at', { ascending: false }).order('id', { ascending: false })
-        .range(from, to).returns<Record<string, unknown>[]>());
+        .range(from, to).returns<Record<string, unknown>[]>();
     }
     if (section === 'media-reviews') {
       return client.from('reviews').select('id, release_id, title, content, total_score, created_at, releases:release_id(id, title, artist_name, cover_url), profiles:user_id!inner(display_name, role, author_category, is_verified)')
         .eq('profiles.role', 'media').order('created_at', { ascending: false })
         .order('id', { ascending: false }).range(from, to).returns<Record<string, unknown>[]>();
     }
-    return selectColumns('reviews', 'id, release_id, title, content, total_score, created_at, releases:release_id(id, title, artist_name, cover_url), profiles:user_id(display_name, role, author_category, is_verified)', ['is_media_review'], (columns) => {
-      const query = client.from('reviews').select(columns)
-        .order('created_at', { ascending: false }).order('id', { ascending: false });
-      return query.range(from, to).returns<Record<string, unknown>[]>();
-    });
+    return client.from('reviews').select('*, releases:release_id(id, title, artist_name, cover_url), profiles:user_id(display_name, role, author_category, is_verified)')
+      .order('created_at', { ascending: false }).order('id', { ascending: false })
+      .range(from, to).returns<Record<string, unknown>[]>();
   }, [section]);
   const { rows, loading, hasMore, error, loadMore } = useSupabasePages(fetchPage, 20);
   const releases = useMemo(() => rows.map((row) => normalizeCatalogRelease(row)), [rows]);

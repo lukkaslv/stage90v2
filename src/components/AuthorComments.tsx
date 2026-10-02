@@ -1,7 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { useSupabasePages } from '@/hooks/useSupabasePages';
 import LoadMoreButton from '@/components/LoadMoreButton';
-import { selectColumns } from '@/lib/selectColumns';
 import { ExternalLink, Heart, MessageCircle } from 'lucide-react';
 import type { Release } from '@/types/music';
 import { supabase } from '@/lib/supabase';
@@ -25,7 +24,7 @@ async function loadCommentRelations(rows: Record<string, unknown>[]) {
   const userIds = [...new Set(rows.map((row) => row.user_id).filter((id) => id != null))];
   const releaseIds = [...new Set(rows.map((row) => row.release_id).filter((id) => id != null))];
   const [profiles, releases] = await Promise.all([
-    userIds.length ? selectColumns('profiles', 'id, display_name, role, author_category, is_verified', ['avatar_url'], (columns) => client.from('profiles').select(columns).in('id', userIds).limit(userIds.length).returns<Record<string, unknown>[]>()) : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
+    userIds.length ? client.from('profiles').select('*').in('id', userIds).limit(userIds.length).returns<Record<string, unknown>[]>() : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
     releaseIds.length ? client.from('releases').select('id, title, artist_name, cover_url').in('id', releaseIds).limit(releaseIds.length) : Promise.resolve({ data: [], error: null }),
   ]);
   if (profiles.error || releases.error) return { data: null, error: profiles.error ?? releases.error };
@@ -43,7 +42,7 @@ export default function AuthorComments({ releaseById, onReleaseClick, refreshVer
     const version = sourceVersion.current;
     if (source.current === 'comments') {
       const client = supabase;
-      const result = await selectColumns('author_comments', 'id, release_id, user_id, created_at', ['content', 'comment', 'text', 'author_name', 'username', 'likes', 'reactions', 'replies', 'reply_count'], (columns) => client.from('author_comments').select(columns).order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to).returns<Record<string, unknown>[]>());
+      const result = await client.from('author_comments').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to).returns<Record<string, unknown>[]>();
       if (version !== sourceVersion.current || from > 0) return result.error ? result : loadCommentRelations(result.data ?? []);
       if (result.data?.length) return loadCommentRelations(result.data);
       const schemaUnavailable = result.error && ['42P01', '42703', 'PGRST200', 'PGRST204', 'PGRST205'].includes(result.error.code);

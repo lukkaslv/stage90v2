@@ -3,7 +3,6 @@ import { ExternalLink, Heart, MessageCircle } from 'lucide-react';
 import type { Release } from '@/types/music';
 import { supabase } from '@/lib/supabase';
 import RoleBadge from '@/components/RoleBadge';
-import { selectColumns } from '@/lib/selectColumns';
 
 interface RecentReviewsFeedProps { onReleaseClick: (release: Release | string) => void; onReviewClick: (id: string) => void; releases: Release[]; releaseById: ReadonlyMap<string, Release>; }
 interface ReviewItem { id: string; username: string; role: string; category?: string; isVerified: boolean; score: number; title: string; text: string; releaseId: number | string; reactions: number; releaseTitle: string; releaseArtist: string; releaseCoverUrl: string; }
@@ -20,7 +19,7 @@ export default function RecentReviewsFeed({ onReleaseClick, onReviewClick, relea
     let requestVersion = 0;
     const loadRecent = async () => {
       const version = ++requestVersion;
-      const { data, error } = await selectColumns('reviews', 'id, release_id, title, content, total_score, profiles:user_id(display_name, role, author_category, is_verified), releases:release_id(title, artist_name, cover_url)', ['reactions', 'likes', 'user_display_name'], (columns) => client.from('reviews').select(columns).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(6).returns<Record<string, unknown>[]>());
+      const { data, error } = await client.from('reviews').select('*, profiles:user_id(display_name, role, author_category, is_verified), releases:release_id(title, artist_name, cover_url)').order('created_at', { ascending: false }).order('id', { ascending: false }).limit(6).returns<Record<string, unknown>[]>();
       if (!cancelled && version === requestVersion && !error) setReviews((data ?? []).map((row) => mapReview(row as Record<string, unknown>)));
     };
     const channel = client.channel('recent-reviews-feed')
