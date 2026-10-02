@@ -135,6 +135,8 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
   const [mediaUrl, setMediaUrl] = useState('');
   const [previewImageUrl, setPreviewImageUrl] = useState('');
   const [authorLikedReviewIds, setAuthorLikedReviewIds] = useState<Set<string>>(new Set());
+  const [authorLikePendingId, setAuthorLikePendingId] = useState<string | null>(null);
+  const [authorLikeError, setAuthorLikeError] = useState('');
   const [authorCommentText, setAuthorCommentText] = useState('');
   const [authorCommentMessage, setAuthorCommentMessage] = useState('');
   const [storedReviews, setStoredReviews] = useState<StoredReview[]>([]);
@@ -295,7 +297,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     }
     setStoredReviews(mappedReviews);
     if ((user?.role === 'author' || user?.role === 'admin') && user.id) {
-      const { data: likes } = await supabase.from('review_author_likes').select('review_id').eq('user_id', user.id);
+      const { data: likes } = await supabase.from('review_author_likes').select('review_id').eq('author_id', user.id);
       setAuthorLikedReviewIds(new Set((likes ?? []).map((row) => String((row as Record<string, unknown>).review_id))));
     } else setAuthorLikedReviewIds(new Set());
   }, [activeRelease, user?.displayName, user?.id, user?.role]);
@@ -331,13 +333,32 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
   };
 
   const toggleAuthorLike = async (reviewId: string) => {
-    if (!supabase || !user || (user.role !== 'author' && user.role !== 'admin')) return;
+    if (!supabase || !user || authorLikePendingId || (user.role !== 'author' && user.role !== 'admin')) return;
     const alreadyLiked = authorLikedReviewIds.has(reviewId);
-    const result = alreadyLiked
-      ? await supabase.from('review_author_likes').delete().eq('review_id', reviewId).eq('user_id', user.id)
-      : await supabase.from('review_author_likes').insert({ review_id: reviewId, user_id: user.id });
-    if (result.error) return;
-    setAuthorLikedReviewIds((previous) => { const next = new Set(previous); if (alreadyLiked) next.delete(reviewId); else next.add(reviewId); return next; });
+    setAuthorLikePendingId(reviewId);
+    setAuthorLikeError('');
+    try {
+      const result = alreadyLiked
+        ? await supabase.from('review_author_likes').delete().eq('review_id', reviewId).eq('author_id', user.id).select('review_id')
+        : await supabase.from('review_author_likes').insert({ review_id: reviewId, author_id: user.id }).select('review_id');
+      if (result.error || result.data?.length !== 1) {
+        setAuthorLikeError('ავტორული მოწონება ვერ შეინახა. სცადეთ ხელახლა.');
+        return;
+      }
+      setAuthorLikedReviewIds((previous) => {
+        const next = new Set(previous);
+        if (alreadyLiked) next.delete(reviewId);
+        else next.add(reviewId);
+        return next;
+      });
+      setStoredReviews((previous) => previous.map((review) => String(review.id) === reviewId
+        ? { ...review, authorLikes: Math.max(0, review.authorLikes + (alreadyLiked ? -1 : 1)) }
+        : review));
+    } catch {
+      setAuthorLikeError('ავტორული მოწონება ვერ შეინახა. სცადეთ ხელახლა.');
+    } finally {
+      setAuthorLikePendingId(null);
+    }
   };
 
   const submitAuthorComment = async () => {
@@ -655,7 +676,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                     <span className="text-xs font-medium text-gray-500">/ 90</span>
                   </div>
                 </div>
-                <div className={`mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 ${personalTierConfig.badge}`}>
+                <div className={`mt-3 flex items-center gap-1.5 rounded-full px-4 py-1.5 ${personalTierConfig.badge}`}>
                   <Gem className={`h-3.5 w-3.5 ${personalTierConfig.icon}`} />
                   <span className="text-sm font-bold">{personalTier}</span>
                 </div>
@@ -931,7 +952,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                       <p className="mt-1 break-words break-all overflow-hidden text-xs font-semibold text-gray-300 line-clamp-1">{review.title}</p>
                       {review.body && <p className="mt-1 break-words break-all overflow-hidden whitespace-pre-wrap text-xs leading-relaxed text-gray-500 line-clamp-2">{review.body}</p>}
                       <button type="button" onClick={() => onOpenReview(String(review.id))} className="mt-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">{review.body ? 'სრული რეცენზიის ნახვა →' : 'შეფასების ნახვა →'}</button>
-                      {(user?.role === 'author' || user?.role === 'admin') && <button onClick={() => void toggleAuthorLike(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${authorLikedReviewIds.has(String(review.id)) ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-200' : 'border-[#2a2a32] text-gray-400 hover:text-cyan-200'}`}>ავტორული მოწონება · {review.authorLikes + (authorLikedReviewIds.has(String(review.id)) ? 1 : 0)}</button>}
+                      {(user?.role === 'author' || user?.role === 'admin') && <button type="button" onClick={() => void toggleAuthorLike(String(review.id))} disabled={authorLikePendingId !== null} aria-pressed={authorLikedReviewIds.has(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold disabled:cursor-wait disabled:opacity-60 ${authorLikedReviewIds.has(String(review.id)) ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-200' : 'border-[#2a2a32] text-gray-400 hover:text-cyan-200'}`}>ავტორული მოწონება · {review.authorLikes}</button>}
                       <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-600">
                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{review.createdAt ? new Date(review.createdAt).toLocaleDateString('ka-GE') : 'ახლახან'}</span>
                         <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" />{review.body ? 'STAGE 90 რეცენზია' : 'STAGE 90 შეფასება'}</span>
@@ -939,6 +960,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                     </div>
                   </div>
                 ))}
+                {authorLikeError && <p role="alert" className="text-xs text-rose-300">{authorLikeError}</p>}
               </div>
               {(user?.role === 'author' || user?.role === 'admin') && <div className="mt-4 border-t border-[#1e1e24] pt-4"><label htmlFor="author-review-comment" className="mb-2 block text-xs font-semibold text-cyan-200">ავტორული კომენტარი</label><div className="flex gap-2"><input id="author-review-comment" value={authorCommentText} onChange={(event) => setAuthorCommentText(event.target.value)} placeholder="დატოვეთ კომენტარი რელიზზე" className="min-w-0 flex-1 rounded-lg border border-[#2a2a32] bg-[#0a0a0c] px-3 py-2 text-xs text-white placeholder-gray-500" /><button onClick={() => void submitAuthorComment()} disabled={!authorCommentText.trim()} className="rounded-lg bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-40">გამოქვეყნება</button></div>{authorCommentMessage && <p className="mt-2 text-xs text-gray-400">{authorCommentMessage}</p>}</div>}
             </div>
