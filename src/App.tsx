@@ -24,7 +24,7 @@ import PageLoader from '@/components/PageLoader';
 import MaintenancePlaceholder from '@/components/MaintenancePlaceholder';
 import { maintenanceMapFromRows, type MaintenanceMap, type MaintenanceRecord } from '@/lib/maintenance';
 
-type AuthMode = 'login' | 'register';
+type AuthMode = 'login' | 'register' | 'invite';
 
 const ReleaseDetail = lazy(() => import('@/components/ReleaseDetail'));
 const AuthModal = lazy(() => import('@/components/AuthModal'));
@@ -53,7 +53,7 @@ function AppContent() {
   const [selectedReview, setSelectedReview] = useState<string | null>(() => pathState().review);
   const [section, setSection] = useState<SectionId | null>(() => pathState().section);
   const [releaseHistory, setReleaseHistory] = useState<Array<Release | string>>([]);
-  const [authMode, setAuthMode] = useState<AuthMode | null>(null);
+  const [authMode, setAuthMode] = useState<AuthMode | null>(() => new URLSearchParams(window.location.search).has('stage90_invite') ? 'invite' : null);
   const [showAbout, setShowAbout] = useState(false);
   const [activeTab, setActiveTab] = useState<PageId>(() => pathState().tab);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('stage90-sidebar-collapsed') === 'true');

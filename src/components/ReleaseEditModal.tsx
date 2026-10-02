@@ -17,7 +17,6 @@ export default function ReleaseEditModal({ release, onClose, onSaved, onRefresh 
   const [coverUrl, setCoverUrl] = useState(textValue(release, 'cover_url', textValue(release, 'coverUrl')));
   const [format, setFormat] = useState(textValue(release, 'release_type', textValue(release, 'type', 'სინგლი')));
   const [season, setSeason] = useState(textValue(release, 'season'));
-  const [valueTier, setValueTier] = useState(textValue(release, 'value_tier', textValue(release, 'valueTier', 'ვერცხლი')));
   const [youtubeUrl, setYoutubeUrl] = useState(textValue(release, 'youtube_url'));
   const [authorId, setAuthorId] = useState(textValue(release, 'author_profile_id'));
   const [parentId, setParentId] = useState(textValue(release, 'parent_id'));
@@ -72,7 +71,7 @@ export default function ReleaseEditModal({ release, onClose, onSaved, onRefresh 
     const parentValue = isBundle ? null : parentId || null;
     const { data, error } = await client.from('releases').update({
       title: title.trim(), artist_name: artist.trim(), cover_url: coverUrl.trim(), release_type: format,
-      season: season.trim(), value_tier: valueTier, youtube_url: youtubeUrl.trim() || null,
+      season: season.trim(), youtube_url: youtubeUrl.trim() || null,
       author_profile_id: authorId || null, parent_id: parentValue,
       track_number: parentValue ? Math.max(1, Number(trackNumber) || 1) : null,
     }).eq('id', releaseId).select('*').single();
@@ -116,7 +115,6 @@ export default function ReleaseEditModal({ release, onClose, onSaved, onRefresh 
         <label className="text-xs text-gray-400 sm:col-span-2">გარეკანის ბმული<input required type="url" value={coverUrl} onChange={(event) => setCoverUrl(event.target.value)} className={inputClass} /></label>
         <label className="text-xs text-gray-400">ფორმატი<select value={format} onChange={(event) => setFormat(event.target.value)} className={inputClass}><option>სინგლი</option><option>ალბომი</option><option>EP</option></select></label>
         <label className="text-xs text-gray-400">სეზონი<input value={season} onChange={(event) => setSeason(event.target.value)} className={inputClass} /></label>
-        <label className="text-xs text-gray-400">ღირებულების გრეიდი<select value={valueTier} onChange={(event) => setValueTier(event.target.value)} className={inputClass}><option>ვერცხლი</option><option>ოქრო</option><option>ზურმუხტი</option><option>საფირონი</option><option>ლალი</option></select></label>
         <label className="text-xs text-gray-400">YouTube ბმული<input type="url" value={youtubeUrl} onChange={(event) => setYoutubeUrl(event.target.value)} className={inputClass} /></label>
         <label className="text-xs text-gray-400 sm:col-span-2">ავტორის ანგარიში (პროფილი)<select value={authorId} onChange={(event) => { setAuthorId(event.target.value); const profile = profiles.find((item) => item.id === event.target.value); if (profile?.display_name) setArtist(profile.display_name); }} className={inputClass}><option value="">— აირჩიეთ რეგისტრირებული პროფილი (არასავალდებულო) —</option>{profiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.display_name || 'რეგისტრირებული პროფილი'}{profile.email ? ` · ${profile.email}` : ''}</option>)}</select></label>
       </div>

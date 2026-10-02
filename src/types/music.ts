@@ -1,3 +1,5 @@
+import { valueTierFromScore } from '@/lib/valueTier';
+
 export type ReleaseType = 'ალბომი' | 'EP' | 'სინგლი' | 'მიქსტეიპი';
 
 export interface Release {
@@ -102,14 +104,6 @@ export const categoryTabs: { id: PageId; label: string }[] = [
   { id: 'faq', label: 'ხშირად დასმული კითხვები' },
 ];
 
-function computeValueTier(score: number): ValueTier {
-  if (score >= 85) return 'ლალი';
-  if (score >= 75) return 'საფირონი';
-  if (score >= 65) return 'ზურმუხტი';
-  if (score >= 50) return 'ოქრო';
-  return 'ვერცხლი';
-}
-
 export function computeRZTScore(params: number[], vibeLevel: number): number {
   const baseSum = params[0] + params[1] + params[2] + params[3];
   const vibeCoeff = VIBE_COEFFICIENTS[vibeLevel - 1] ?? 1.0;
@@ -117,5 +111,5 @@ export function computeRZTScore(params: number[], vibeLevel: number): number {
 }
 
 export function scoreToTier(score: number): ValueTier {
-  return computeValueTier(score);
+  return valueTierFromScore(score);
 }

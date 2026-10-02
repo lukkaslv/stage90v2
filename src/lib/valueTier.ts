@@ -1,3 +1,5 @@
+import type { Release } from '@/types/music';
+
 export type StrictValueTier = 'ლალი' | 'საფირონი' | 'ზურმუხტი' | 'ოქრო' | 'ვერცხლი';
 
 export const STRICT_VALUE_TIER_CONFIG: Record<StrictValueTier, { badge: string; icon: string }> = {
@@ -16,6 +18,15 @@ export function valueTierFromScore(score: number): StrictValueTier {
   return 'ვერცხლი';
 }
 
-export function normalizeValueTier(value: unknown, fallbackScore: number): StrictValueTier {
-  return typeof value === 'string' && value in STRICT_VALUE_TIER_CONFIG ? value as StrictValueTier : valueTierFromScore(fallbackScore);
+export function releaseCommunityScore(release: Pick<Release, 'community_score' | 'score_community'>): number | null {
+  for (const score of [release.community_score, release.score_community]) {
+    const parsed = Number(score);
+    if (score != null && Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return null;
+}
+
+export function releaseValueTier(release: Pick<Release, 'community_score' | 'score_community'>): StrictValueTier | null {
+  const score = releaseCommunityScore(release);
+  return score === null ? null : valueTierFromScore(score);
 }

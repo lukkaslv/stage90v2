@@ -32,7 +32,7 @@ import {
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import RoleBadge, { VerificationBadge } from '@/components/RoleBadge';
-import { STRICT_VALUE_TIER_CONFIG, valueTierFromScore } from '@/lib/valueTier';
+import { releaseCommunityScore, releaseValueTier, STRICT_VALUE_TIER_CONFIG, valueTierFromScore } from '@/lib/valueTier';
 
 interface ReleaseDetailProps {
   release: Release | string | null;
@@ -84,6 +84,8 @@ interface StoredReview {
   authorCategory?: string;
   isVerified: boolean;
   authorLikes: number;
+  mediaUrl: string | null;
+  previewImageUrl: string | null;
 }
 
 function normalizeRelease(row: Record<string, unknown>): Release {
@@ -277,6 +279,8 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
         authorCategory: profile?.author_category ? String(profile.author_category) : undefined,
         isVerified: Boolean(profile?.is_verified),
         authorLikes: Number(item.author_like_count ?? 0),
+        mediaUrl: typeof item.media_url === 'string' ? item.media_url : null,
+        previewImageUrl: typeof item.preview_image_url === 'string' ? item.preview_image_url : null,
       };
     });
     const reviewIds = mappedReviews.map((review) => String(review.id));
@@ -290,7 +294,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
       mappedReviews.forEach((review) => { review.authorLikes = likeCounts.get(String(review.id)) ?? review.authorLikes; });
     }
     setStoredReviews(mappedReviews);
-    if ((user?.role === 'author' || user?.role === 'artist' || user?.role === 'admin') && user.id) {
+    if ((user?.role === 'author' || user?.role === 'admin') && user.id) {
       const { data: likes } = await supabase.from('review_author_likes').select('review_id').eq('user_id', user.id);
       setAuthorLikedReviewIds(new Set((likes ?? []).map((row) => String((row as Record<string, unknown>).review_id))));
     } else setAuthorLikedReviewIds(new Set());
@@ -327,7 +331,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
   };
 
   const toggleAuthorLike = async (reviewId: string) => {
-    if (!supabase || !user || (user.role !== 'author' && user.role !== 'artist' && user.role !== 'admin')) return;
+    if (!supabase || !user || (user.role !== 'author' && user.role !== 'admin')) return;
     const alreadyLiked = authorLikedReviewIds.has(reviewId);
     const result = alreadyLiked
       ? await supabase.from('review_author_likes').delete().eq('review_id', reviewId).eq('user_id', user.id)
@@ -338,7 +342,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
 
   const submitAuthorComment = async () => {
     if (!supabase || !user || !activeRelease || !authorCommentText.trim()) return;
-    if (user.role !== 'author' && user.role !== 'artist' && user.role !== 'admin') return;
+    if (user.role !== 'author' && user.role !== 'admin') return;
     const { error } = await supabase.from('author_comments').insert({ release_id: activeRelease.id, user_id: user.id, author_name: user.displayName, content: authorCommentText.trim() });
     setAuthorCommentMessage(error ? 'კომენტარის გამოქვეყნება ვერ მოხერხდა.' : 'კომენტარი გამოქვეყნდა.');
     if (!error) setAuthorCommentText('');
@@ -351,37 +355,12 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     setPreviewImageUrl('');
   };
 
-  const persistReleaseScore = async (reviewScore: number) => {
-    if (!supabase || !activeRelease || !user) return;
-    const isCriticsReview = user.role === 'admin' || user.role === 'media';
-    let aggregateScore = reviewScore;
-    if (!isCriticsReview) {
-      const { data } = await supabase.from('reviews').select('total_score, profiles:user_id(role)').eq('release_id', activeRelease.id);
-      const communityScores = (data ?? []).map((row) => {
-        const item = row as Record<string, unknown>;
-        const profile = Array.isArray(item.profiles) ? item.profiles[0] as Record<string, unknown> | undefined : item.profiles as Record<string, unknown> | undefined;
-        return ['user', 'author'].includes(String(profile?.role ?? '')) ? Number(item.total_score ?? 0) : null;
-      }).filter((score): score is number => score !== null);
-      if (communityScores.length > 0) aggregateScore = Math.round(communityScores.reduce((sum, score) => sum + score, 0) / communityScores.length);
-    }
-    const tier = valueTierFromScore(aggregateScore);
-    const changes = isCriticsReview
-      ? { critics_score: reviewScore, score_critics: reviewScore, value_tier: tier }
-      : { community_score: aggregateScore, score_community: aggregateScore, value_tier: tier };
-    let { error } = await supabase.from('releases').update(changes).eq('id', activeRelease.id);
-    if (error && /column|schema cache|could not find/i.test(error.message)) {
-      const fallbackChanges = isCriticsReview ? { score_critics: reviewScore, value_tier: tier } : { score_community: aggregateScore, value_tier: tier };
-      ({ error } = await supabase.from('releases').update(fallbackChanges).eq('id', activeRelease.id));
-    }
-    if (!error) setLoadedRelease((current) => current ? { ...current, ...changes, score: aggregateScore, valueTier: tier, value_tier: tier } : current);
-  };
-
   const handleSubmit = async () => {
     if (!canSubmit || !user || !supabase || !activeRelease) {
       if (!supabase) setReviewError('Supabase ჯერ არ არის კონფიგურირებული');
       return;
     }
-    if (charCount < charMin || charCount > charMax) {
+    if (formTab === 'review' && (charCount < charMin || charCount > charMax)) {
       setReviewError(`რეცენზიის ტექსტი უნდა იყოს ${charMin}-დან ${charMax} სიმბოლომდე`);
       return;
     }
@@ -397,24 +376,24 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     }
 
     const displayName = user.displayName || String(authenticatedUser.user_metadata?.display_name ?? authenticatedUser.email?.split('@')[0] ?? 'მომხმარებელი');
+    const existingReview = storedReviews.find((review) => review.userId === authenticatedUser.id);
     const reviewPayload = {
       release_id: activeRelease.id,
       user_id: authenticatedUser.id,
-      title: reviewTitle.trim(),
-      content: reviewText.trim(),
+      title: formTab === 'review' ? reviewTitle.trim() : existingReview?.title ?? (formTab === 'value' ? 'ღირებულების შეფასება' : 'შეფასება'),
+      content: formTab === 'review' ? reviewText.trim() : existingReview?.body ?? '',
       rhymes: params[0],
       structure: params[1],
       style: params[2],
       individuality: params[3],
       vibe: vibeLevel,
       total_score: totalScore,
-      media_url: isMediaUser && mediaUrl.trim() ? mediaUrl.trim() : null,
-      preview_image_url: isMediaUser && previewImageUrl.trim() ? previewImageUrl.trim() : null,
+      media_url: formTab === 'review' ? (isMediaUser && mediaUrl.trim() ? mediaUrl.trim() : null) : existingReview?.mediaUrl ?? null,
+      preview_image_url: formTab === 'review' ? (isMediaUser && previewImageUrl.trim() ? previewImageUrl.trim() : null) : existingReview?.previewImageUrl ?? null,
       is_media_review: isMediaUser,
       user_display_name: displayName,
       author_name: displayName,
     };
-    const existingReview = storedReviews.find((review) => review.userId === authenticatedUser.id);
     let { error } = existingReview
       ? await supabase.from('reviews').update(reviewPayload).eq('id', existingReview.id)
       : await supabase.from('reviews').insert(reviewPayload);
@@ -426,14 +405,11 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
         ? await supabase.from('reviews').update(basePayload).eq('id', existingReview.id)
         : await supabase.from('reviews').insert(basePayload));
     }
-    setIsSubmitting(false);
-
     if (error) {
+      setIsSubmitting(false);
       setReviewError(error.message);
       return;
     }
-
-    await persistReleaseScore(totalScore);
 
     handleClear();
     setParams([5, 5, 5, 5]);
@@ -442,6 +418,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     const { data: refreshedRelease } = await supabase.from('releases').select('*').eq('id', activeRelease.id).maybeSingle();
     if (refreshedRelease) setLoadedRelease(normalizeRelease(refreshedRelease as Record<string, unknown>));
     onReviewSubmitted?.(activeRelease.id, !existingReview);
+    setIsSubmitting(false);
   };
 
   useEffect(() => {
@@ -457,13 +434,14 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     );
   }
 
-  const scores = { community: activeRelease.score_community || activeRelease.scores?.community || '—', critics: activeRelease.score_critics || activeRelease.scores?.critics || '—', personal: activeRelease.personalScore || activeRelease.scores?.personal || '—' };
-  const hasCommunityReviews = storedReviews.some((review) => ['user', 'author', 'artist'].includes(review.role));
   const reviewCount = storedReviews.length || Number(activeRelease.reviewCount ?? activeRelease.reviews_count ?? 0);
-  const boundCommunityScore = hasCommunityReviews && Number(activeRelease.community_score ?? activeRelease.score_community ?? activeRelease.scores?.community ?? 0) > 0 ? Number(activeRelease.community_score ?? activeRelease.score_community ?? activeRelease.scores?.community) : '—';
-  const boundCriticsScore = Number(activeRelease.critics_score ?? activeRelease.score_critics ?? activeRelease.scores?.critics ?? 0) > 0 ? Number(activeRelease.critics_score ?? activeRelease.score_critics ?? activeRelease.scores?.critics) : '—';
-  const boundReleaseTier = valueTierFromScore(Number(activeRelease.community_score ?? activeRelease.score_community ?? activeRelease.scores?.community ?? 0));
-  const releaseTierConfig = STRICT_VALUE_TIER_CONFIG[boundReleaseTier];
+  const boundCommunityScore = releaseCommunityScore(activeRelease) ?? '—';
+  const criticsScore = Number(activeRelease.critics_score ?? activeRelease.score_critics);
+  const boundCriticsScore = Number.isFinite(criticsScore) && criticsScore > 0 ? criticsScore : '—';
+  const boundReleaseTier = releaseValueTier(activeRelease);
+  const releaseTierConfig = boundReleaseTier ? STRICT_VALUE_TIER_CONFIG[boundReleaseTier] : null;
+  const personalTier = valueTierFromScore(totalScore);
+  const personalTierConfig = STRICT_VALUE_TIER_CONFIG[personalTier];
   const normalizedReleaseType = String(activeRelease.release_type ?? activeRelease.type ?? '').trim().toLowerCase();
   const displayedTrackCount = normalizedReleaseType === 'single' || normalizedReleaseType === 'track' || normalizedReleaseType === 'სინგლი'
     ? Math.max(1, activeRelease.trackCount)
@@ -575,7 +553,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 </span>
                 <span className="flex items-center gap-1">
                   <Users className="h-3.5 w-3.5" />
-                  {reviewCount} რეცენზია
+                  {reviewCount} შეფასება
                 </span>
               </div>
             </div>
@@ -592,7 +570,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                   <span className="text-2xl font-extrabold leading-none">{boundCriticsScore}</span>
                   <span className="text-[10px] font-medium text-gray-500">კრიტიკოსები</span>
                 </div>
-                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(scores.personal))}`}>
+                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(userPersonalReview?.totalScore))}`}>
                   <span className="text-2xl font-extrabold leading-none">{userPersonalReview?.totalScore ?? '—'}</span>
                   <span className="text-[10px] font-medium text-gray-500">პერსონალური</span>
                 </div>
@@ -600,11 +578,11 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
             </div>
 
             {/* Value tier banner */}
-            <div className={`mt-5 flex items-center gap-3 rounded-xl px-5 py-3 ${releaseTierConfig.badge}`}>
-              <Gem className={`h-5 w-5 ${releaseTierConfig.icon}`} />
+            <div className={`mt-5 flex items-center gap-3 rounded-xl px-5 py-3 ${releaseTierConfig?.badge ?? 'border border-zinc-700/50 bg-zinc-900/30 text-zinc-400'}`}>
+              <Gem className={`h-5 w-5 ${releaseTierConfig?.icon ?? 'text-zinc-500'}`} />
               <div>
                 <p className="text-xs text-gray-400">{valueTierHeading(activeRelease.release_type ?? activeRelease.type)}</p>
-                <p className="text-lg font-extrabold">{boundReleaseTier}</p>
+                <p className="text-lg font-extrabold">{boundReleaseTier ?? 'ჯერ არ შეფასებულა'}</p>
               </div>
             </div>
           </div>
@@ -652,7 +630,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 შესული ხართ როგორც {user.displayName}
               </p>
               <p className="text-xs text-gray-400">
-                {user.role === 'artist' ? 'ვერიფიცირებული ავტორი — შეფასება და რეცენზია ხელმისაწვდომია' : 'მომხმარებელი — შეფასება და რეცენზია ხელმისაწვდომია'}
+                {user.role === 'author' ? 'ვერიფიცირებული ავტორი — შეფასება და რეცენზია ხელმისაწვდომია' : 'მომხმარებელი — შეფასება და რეცენზია ხელმისაწვდომია'}
               </p>
             </div>
           </div>
@@ -680,9 +658,9 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                     <span className="text-xs font-medium text-gray-500">/ 90</span>
                   </div>
                 </div>
-                <div className={`mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 ${releaseTierConfig.badge}`}>
-                  <Gem className={`h-3.5 w-3.5 ${releaseTierConfig.icon}`} />
-                  <span className="text-sm font-bold">{boundReleaseTier}</span>
+                <div className={`mt-3 flex items-center gap-1.5 rounded-full px-3 py-1 ${personalTierConfig.badge}`}>
+                  <Gem className={`h-3.5 w-3.5 ${personalTierConfig.icon}`} />
+                  <span className="text-sm font-bold">{personalTier}</span>
                 </div>
               </div>
 
@@ -883,10 +861,10 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
 
                 {formTab === 'value' && (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <Gem className={`mb-3 h-10 w-10 ${releaseTierConfig.icon}`} />
+                    <Gem className={`mb-3 h-10 w-10 ${personalTierConfig.icon}`} />
                     <p className="text-sm text-gray-400">ალბომის ღირებულების მინიჭება</p>
-                    <div className={`mt-3 flex items-center gap-2 rounded-xl px-6 py-3 ${releaseTierConfig.badge}`}>
-                      <span className="text-2xl font-extrabold">{boundReleaseTier}</span>
+                    <div className={`mt-3 flex items-center gap-2 rounded-xl px-6 py-3 ${personalTierConfig.badge}`}>
+                      <span className="text-2xl font-extrabold">{personalTier}</span>
                     </div>
                     <p className="mt-3 text-xs text-gray-600">
                       თქვენი შეფასების ქულა: <span className="font-bold text-cyan-400">{totalScore} / 90</span>
@@ -928,12 +906,12 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 <span className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-400/10">
                   <MessageSquare className="h-4 w-4 text-violet-400" />
                 </span>
-                <h3 className="text-sm font-bold text-white">ცალკე აღებული რეცენზიები</h3>
+                <h3 className="text-sm font-bold text-white">შეფასებები და რეცენზიები</h3>
               </div>
               <div className="space-y-3">
                 {storedReviews.length === 0 && (
                   <p className="rounded-lg border border-[#1e1e24] p-4 text-xs text-gray-500">
-                    {reviewError ? 'რეცენზიების ჩატვირთვა ვერ მოხერხდა.' : 'ამ რელიზზე რეცენზიები ჯერ არ არის.'}
+                    {reviewError ? 'შეფასებების ჩატვირთვა ვერ მოხერხდა.' : 'ამ რელიზზე შეფასებები ჯერ არ არის.'}
                   </p>
                 )}
                 {storedReviews.map((review) => (
@@ -954,18 +932,18 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                         </span>
                       </div>
                       <p className="mt-1 break-words break-all overflow-hidden text-xs font-semibold text-gray-300 line-clamp-1">{review.title}</p>
-                      <p className="mt-1 break-words break-all overflow-hidden whitespace-pre-wrap text-xs leading-relaxed text-gray-500 line-clamp-2">{review.body}</p>
-                      <button type="button" onClick={() => onOpenReview(String(review.id))} className="mt-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">სრული რეცენზიის ნახვა →</button>
-                      {(user?.role === 'author' || user?.role === 'artist' || user?.role === 'admin') && <button onClick={() => void toggleAuthorLike(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${authorLikedReviewIds.has(String(review.id)) ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-200' : 'border-[#2a2a32] text-gray-400 hover:text-cyan-200'}`}>ავტორული მოწონება · {review.authorLikes + (authorLikedReviewIds.has(String(review.id)) ? 1 : 0)}</button>}
+                      {review.body && <p className="mt-1 break-words break-all overflow-hidden whitespace-pre-wrap text-xs leading-relaxed text-gray-500 line-clamp-2">{review.body}</p>}
+                      <button type="button" onClick={() => onOpenReview(String(review.id))} className="mt-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">{review.body ? 'სრული რეცენზიის ნახვა →' : 'შეფასების ნახვა →'}</button>
+                      {(user?.role === 'author' || user?.role === 'admin') && <button onClick={() => void toggleAuthorLike(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${authorLikedReviewIds.has(String(review.id)) ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-200' : 'border-[#2a2a32] text-gray-400 hover:text-cyan-200'}`}>ავტორული მოწონება · {review.authorLikes + (authorLikedReviewIds.has(String(review.id)) ? 1 : 0)}</button>}
                       <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-600">
                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{review.createdAt ? new Date(review.createdAt).toLocaleDateString('ka-GE') : 'ახლახან'}</span>
-                        <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" />STAGE 90 რეცენზია</span>
+                        <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" />{review.body ? 'STAGE 90 რეცენზია' : 'STAGE 90 შეფასება'}</span>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              {(user?.role === 'author' || user?.role === 'artist' || user?.role === 'admin') && <div className="mt-4 border-t border-[#1e1e24] pt-4"><label htmlFor="author-review-comment" className="mb-2 block text-xs font-semibold text-cyan-200">ავტორული კომენტარი</label><div className="flex gap-2"><input id="author-review-comment" value={authorCommentText} onChange={(event) => setAuthorCommentText(event.target.value)} placeholder="დატოვეთ კომენტარი რელიზზე" className="min-w-0 flex-1 rounded-lg border border-[#2a2a32] bg-[#0a0a0c] px-3 py-2 text-xs text-white placeholder-gray-500" /><button onClick={() => void submitAuthorComment()} disabled={!authorCommentText.trim()} className="rounded-lg bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-40">გამოქვეყნება</button></div>{authorCommentMessage && <p className="mt-2 text-xs text-gray-400">{authorCommentMessage}</p>}</div>}
+              {(user?.role === 'author' || user?.role === 'admin') && <div className="mt-4 border-t border-[#1e1e24] pt-4"><label htmlFor="author-review-comment" className="mb-2 block text-xs font-semibold text-cyan-200">ავტორული კომენტარი</label><div className="flex gap-2"><input id="author-review-comment" value={authorCommentText} onChange={(event) => setAuthorCommentText(event.target.value)} placeholder="დატოვეთ კომენტარი რელიზზე" className="min-w-0 flex-1 rounded-lg border border-[#2a2a32] bg-[#0a0a0c] px-3 py-2 text-xs text-white placeholder-gray-500" /><button onClick={() => void submitAuthorComment()} disabled={!authorCommentText.trim()} className="rounded-lg bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-40">გამოქვეყნება</button></div>{authorCommentMessage && <p className="mt-2 text-xs text-gray-400">{authorCommentMessage}</p>}</div>}
             </div>
           </div>
         </div>

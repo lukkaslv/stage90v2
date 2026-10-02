@@ -5,7 +5,6 @@ import {
   Lock,
   User as UserIcon,
   Music,
-  HelpCircle,
   Link2,
   CheckCircle2,
   Eye,
@@ -13,8 +12,21 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/auth-context';
 
-type AuthMode = 'login' | 'register';
-type RegisterRole = 'user' | 'artist';
+type AuthMode = 'login' | 'register' | 'invite';
+type RegisterRole = 'user' | 'author';
+
+function validSocialUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, '').toLowerCase();
+    const parts = url.pathname.split('/').filter(Boolean);
+    return url.protocol === 'https:' && (
+      (host === 'instagram.com' && parts.length === 1) ||
+      (host === 'youtube.com' && parts.length === 2 && ['channel', 'c', 'user'].includes(parts[0])) ||
+      (host === 'youtube.com' && parts.length === 1 && parts[0].startsWith('@'))
+    );
+  } catch { return false; }
+}
 
 interface AuthModalProps {
   initialMode: AuthMode;
@@ -22,7 +34,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, setPassword: savePassword } = useAuth();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [registerRole, setRegisterRole] = useState<RegisterRole>('user');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,12 +54,11 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
 
   // Artist-specific
   const [artistName, setArtistName] = useState('');
-  const [verifyLink, setVerifyLink] = useState('');
+  const [socialUrl, setSocialUrl] = useState('');
 
   // Checkboxes
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [agreePrivacy, setAgreePrivacy] = useState(false);
-  const [sentVerification, setSentVerification] = useState(false);
 
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -85,12 +96,12 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+    if (!email.trim()) {
       setError('შეავსეთ ყველა აუცილებელი ველი');
       return;
     }
-    if (password !== confirmPassword) {
-      setError('პაროლები არ ემთხვევა ერთმანეთს');
+    if (!validSocialUrl(socialUrl.trim())) {
+      setError('მიუთითეთ თქვენი Instagram-ის ან YouTube-ის პროფილის სწორი ბმული');
       return;
     }
     if (!agreeTerms || !agreePrivacy) {
@@ -101,30 +112,41 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
       setError('შეავსეთ გამოსაჩენი სახელი და რეგისტრაციის მიზეზი');
       return;
     }
-    if (registerRole === 'artist' && (!artistName.trim() || !verifyLink.trim() || !sentVerification)) {
-      setError('შეავსეთ ავტორის ველები და დაადასტურეთ გაგზავნა');
+    if (registerRole === 'author' && !artistName.trim()) {
+      setError('შეავსეთ ავტორის სახელი');
       return;
     }
     setError('');
     setNotice('');
     setIsSubmitting(true);
-    const result = await signUp(email.trim(), password, {
+    const result = await signUp(email.trim(), {
       role: registerRole,
       displayName: displayName.trim(),
       registrationReason: regReason.trim(),
       artistName: artistName.trim(),
-      verificationLink: verifyLink.trim(),
+      socialUrl: socialUrl.trim(),
     });
     setIsSubmitting(false);
     if (result.error) {
       setError(result.error);
       return;
     }
-    if (result.needsEmailConfirmation) {
-      setNotice('ანგარიში შეიქმნა. გთხოვთ, დაადასტუროთ ელ-ფოსტა და შემდეგ შეხვიდეთ.');
-    } else {
-      onClose();
+    setNotice('განაცხადი გაიგზავნა. ადმინისტრატორის დადასტურების შემდეგ ელ-ფოსტით მიიღებთ მოწვევას ანგარიშის შესაქმნელად.');
+  };
+
+  const handleInvite = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (password.length < 8 || password !== confirmPassword) {
+      setError('პაროლი უნდა შეიცავდეს მინიმუმ 8 სიმბოლოს და ემთხვეოდეს დადასტურებას');
+      return;
     }
+    setError('');
+    setIsSubmitting(true);
+    const result = await savePassword(password);
+    setIsSubmitting(false);
+    if (result.error) { setError(result.error); return; }
+    window.history.replaceState(window.history.state, '', window.location.pathname);
+    onClose();
   };
 
   const inputClass =
@@ -158,7 +180,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
               <Music className="h-6 w-6 text-black" />
             </div>
             <h2 className="text-xl font-bold text-white">
-              {mode === 'login' ? 'ავტორიზაცია' : 'რეგისტრაცია'}
+              {mode === 'login' ? 'ავტორიზაცია' : mode === 'invite' ? 'პაროლის შექმნა' : 'რეგისტრაციის განაცხადი'}
             </h2>
             <p className="mt-1 text-xs text-gray-500">
               რზტ — რისა ზა თვორჩესტვო
@@ -166,7 +188,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
           </div>
 
           {/* Mode switch */}
-          <div className="mb-6 flex gap-1 rounded-xl border border-[#1e1e24] bg-[#0a0a0c] p-1">
+          {mode !== 'invite' && <div className="mb-6 flex gap-1 rounded-xl border border-[#1e1e24] bg-[#0a0a0c] p-1">
             <button
               onClick={() => { setMode('login'); setError(''); }}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
@@ -183,7 +205,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
             >
               რეგისტრაცია
             </button>
-          </div>
+          </div>}
 
           {/* Error */}
           {error && (
@@ -265,9 +287,9 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setRegisterRole('artist'); setError(''); }}
+                  onClick={() => { setRegisterRole('author'); setError(''); }}
                   className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                    registerRole === 'artist' ? 'bg-violet-400/10 text-violet-400' : 'text-gray-500 hover:text-gray-300'
+                    registerRole === 'author' ? 'bg-violet-400/10 text-violet-400' : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
                   მე ავტორი ვარ
@@ -321,8 +343,8 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                 </>
               )}
 
-              {/* ARTIST ROLE FIELDS */}
-              {registerRole === 'artist' && (
+              {/* AUTHOR ROLE FIELDS */}
+              {registerRole === 'author' && (
                 <>
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-300">
@@ -340,86 +362,16 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                     </div>
                   </div>
 
-                  {/* Verification box */}
-                  <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4">
-                    <div className="mb-2 flex items-center gap-2">
-                      <HelpCircle className="h-4 w-4 text-violet-400" />
-                      <span className="text-sm font-semibold text-violet-300">
-                        ავტორის რეგისტრაციის დადასტურება (?)
-                      </span>
-                    </div>
-                    <p className="mb-3 text-xs leading-relaxed text-gray-400">
-                      ავტორის სტატუსის დასადასტურებლად თქვენი ოფიციალური ინსტაგრამის ანგარიშიდან
-                      გაუგზავნეთ შეტყობინება <a href="https://www.instagram.com/stage90.ge/" target="_blank" rel="noopener noreferrer" className="font-semibold text-violet-300 underline hover:text-violet-200">@stage90.ge</a>-ს.
-                    </p>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-300">
-                      მიუთითეთ ოფიციალური ინსტაგრამის ანგარიშის ბმული, საიდანაც შეტყობინებას გამოგვიგზავნით *
-                    </label>
-                    <div className="relative">
-                      <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600" />
-                      <input
-                        type="text"
-                        value={verifyLink}
-                        onChange={(e) => setVerifyLink(e.target.value)}
-                        placeholder="https://www.instagram.com/თქვენი_ანგარიში/"
-                        className={`${inputClass} pl-10`}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Sent verification checkbox */}
-                  <label className="flex items-start gap-2.5 cursor-pointer">
-                    <button
-                      type="button"
-                      onClick={() => setSentVerification(!sentVerification)}
-                      className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                        sentVerification
-                          ? 'border-violet-400 bg-violet-400/20'
-                          : 'border-[#2a2a32] bg-[#0a0a0c]'
-                      }`}
-                    >
-                      {sentVerification && <CheckCircle2 className="h-3.5 w-3.5 text-violet-400" />}
-                    </button>
-                    <span className="text-xs leading-relaxed text-gray-400">
-                      ჩემი ოფიციალური ინსტაგრამის ანგარიშიდან @stage90.ge-ს შეტყობინება გავუგზავნე *
-                    </span>
-                  </label>
                 </>
               )}
 
-              {/* Password & Confirm (both roles) */}
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-300">პაროლი *</label>
+              <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4">
+                <label className="mb-1.5 block text-sm font-medium text-gray-300">თქვენი Instagram-ის ან YouTube-ის პროფილის ბმული *</label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`${inputClass} pl-10 pr-10`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-400"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                  <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600" />
+                  <input type="url" value={socialUrl} onChange={(event) => setSocialUrl(event.target.value)} placeholder="https://www.instagram.com/თქვენი_პროფილი/" className={`${inputClass} pl-10`} />
                 </div>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-300">დაადასტურეთ პაროლი *</label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600" />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`${inputClass} pl-10`}
-                  />
-                </div>
+                <p className="mt-2 text-xs leading-relaxed text-gray-400">განაცხადს ადმინისტრატორი შეამოწმებს. მიუთითეთ რეალური პროფილი, რომელიც თქვენ გეკუთვნით.</p>
               </div>
 
               {/* Legal checkboxes */}
@@ -458,10 +410,22 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                 disabled={isSubmitting}
                 className="w-full rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan"
               >
-                {isSubmitting ? 'მიმდინარეობს...' : registerRole === 'user'
-                  ? 'მომხმარებლის ანგარიშის შექმნა'
-                  : 'ავტორის ანგარიშის შექმნა'}
+                {isSubmitting ? 'იგზავნება...' : 'განაცხადის გაგზავნა'}
               </button>
+            </form>
+          )}
+
+          {mode === 'invite' && (
+            <form onSubmit={handleInvite} className="space-y-4">
+              <p className="text-sm text-gray-400">თქვენი განაცხადი დამტკიცებულია. შექმენით პაროლი ანგარიშში შესასვლელად.</p>
+              <label className="block text-sm text-gray-300">პაროლი *
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} className={`${inputClass} mt-1`} />
+              </label>
+              <label className="block text-sm text-gray-300">გაიმეორეთ პაროლი *
+                <input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} className={`${inputClass} mt-1`} />
+              </label>
+              <button type="button" onClick={() => setShowPassword(!showPassword)} className="flex items-center gap-2 text-xs text-gray-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{showPassword ? 'პაროლის დამალვა' : 'პაროლის ჩვენება'}</button>
+              <button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 py-3 text-sm font-bold text-black disabled:opacity-50">{isSubmitting ? 'ინახება...' : 'პაროლის შენახვა'}</button>
             </form>
           )}
 

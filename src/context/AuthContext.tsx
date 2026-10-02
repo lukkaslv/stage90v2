@@ -3,7 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { AuthContext } from './auth-context';
 
-export type UserRole = 'guest' | 'user' | 'author' | 'artist' | 'media' | 'admin';
+export type UserRole = 'guest' | 'user' | 'author' | 'media' | 'admin';
 
 export interface User {
   id: string;
@@ -15,20 +15,17 @@ export interface User {
 }
 
 interface ProfileInput {
-  role: Exclude<UserRole, 'guest'>;
+  role: 'user' | 'author';
   displayName?: string;
   registrationReason?: string;
   artistName?: string;
-  verificationLink?: string;
+  socialUrl: string;
 }
 
 function profileToUser(profile: Record<string, unknown> | null, session: Session): User {
-  const metadata = session.user.user_metadata ?? {};
-  const roleValue = String(profile?.role ?? metadata.role ?? 'user');
-  const role: UserRole = ['user', 'author', 'artist', 'media', 'admin'].includes(roleValue) ? roleValue as UserRole : 'user';
-  const displayName = role === 'author' || role === 'artist'
-    ? String(profile?.artist_name ?? metadata.artist_name ?? session.user.email?.split('@')[0] ?? 'ავტორი')
-    : String(profile?.display_name ?? metadata.display_name ?? session.user.email?.split('@')[0] ?? 'მომხმარებელი');
+  const roleValue = String(profile?.role ?? 'user');
+  const role: UserRole = ['user', 'author', 'media', 'admin'].includes(roleValue) ? roleValue as UserRole : 'user';
+  const displayName = String(profile?.display_name ?? profile?.artist_name ?? session.user.email?.split('@')[0] ?? 'მომხმარებელი');
 
   return {
     id: session.user.id,
@@ -51,11 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!supabase) {
-      setProfile(null);
-      setUser(profileToUser(null, session));
-      return;
-    }
+    if (!supabase) return;
 
     const { data: profile } = await supabase
       .from('profiles')
@@ -65,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const databaseProfile = (profile as Record<string, unknown> | null) ?? null;
     setProfile(databaseProfile);
-    setUser(profileToUser(databaseProfile, session));
+    setUser(databaseProfile ? profileToUser(databaseProfile, session) : null);
   };
 
   const refreshProfile = async () => {
@@ -96,29 +89,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = async (email: string, password: string) => {
     if (!supabase) return { error: 'Supabase ჯერ არ არის კონფიგურირებული' };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return error ? { error: error.message } : {};
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { error: 'შესვლა ვერ მოხერხდა. შეამოწმეთ ელ-ფოსტა და პაროლი.' };
+    const { data: account } = await supabase.from('profiles').select('id').eq('id', data.user.id).maybeSingle();
+    if (!account) {
+      await supabase.auth.signOut();
+      return { error: 'ეს ანგარიში ადმინისტრატორის მიერ ჯერ არ არის დამტკიცებული.' };
+    }
+    return {};
   };
 
-  const signUp = async (email: string, password: string, profile: ProfileInput) => {
+  const signUp = async (email: string, profile: ProfileInput) => {
     if (!supabase) return { error: 'Supabase ჯერ არ არის კონფიგურირებული' };
+    const { error } = await supabase.from('registration_requests').insert({
+      email: email.trim().toLowerCase(),
+      requested_role: profile.role,
+      display_name: profile.role === 'author' ? profile.artistName?.trim() : profile.displayName?.trim(),
+      registration_reason: profile.registrationReason?.trim() || null,
+      social_url: profile.socialUrl.trim(),
+    });
+    return error ? { error: 'განაცხადი ვერ გაიგზავნა. შეამოწმეთ ველები ან სცადეთ სხვა ელ-ფოსტა.' } : {};
+  };
 
-    const metadata = profile.role === 'user'
-      ? { role: 'user', display_name: profile.displayName, registration_reason: profile.registrationReason }
-      : { role: 'author', artist_name: profile.artistName, verification_link: profile.verificationLink, is_verified: false };
-
-    const { data, error } = await supabase.auth.signUp({ email, password, options: { data: metadata } });
-    if (error) return { error: error.message };
-
-    if (data.user) {
-      const profileRow: Record<string, unknown> = profile.role === 'user'
-        ? { id: data.user.id, email: data.user.email ?? email, role: 'user', display_name: profile.displayName, registration_reason: profile.registrationReason, is_verified: false }
-        : { id: data.user.id, email: data.user.email ?? email, role: 'author', artist_name: profile.artistName, verification_link: profile.verificationLink, is_verified: false };
-      const { error: profileError } = await supabase.from('profiles').upsert(profileRow, { onConflict: 'id' });
-      if (profileError) return { error: profileError.message };
-    }
-
-    return { needsEmailConfirmation: !data.session };
+  const setPassword = async (password: string) => {
+    if (!supabase) return { error: 'Supabase ჯერ არ არის კონფიგურირებული' };
+    const { error } = await supabase.auth.updateUser({ password });
+    return error ? { error: 'პაროლის შენახვა ვერ მოხერხდა. სცადეთ ხელახლა.' } : {};
   };
 
   const logout = async () => {
@@ -128,7 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, profile, isAdmin: profile?.role === 'admin', isAuthenticated: user !== null, signIn, signUp, logout, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, isAdmin: profile?.role === 'admin', isAuthenticated: user !== null, signIn, signUp, setPassword, logout, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

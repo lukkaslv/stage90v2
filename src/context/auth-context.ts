@@ -7,7 +7,8 @@ export interface AuthContextValue {
   isAdmin: boolean;
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string, profile: { role: Exclude<User['role'], 'guest'>; displayName?: string; registrationReason?: string; artistName?: string; verificationLink?: string }) => Promise<{ error?: string; needsEmailConfirmation?: boolean }>;
+  signUp: (email: string, profile: { role: 'user' | 'author'; displayName?: string; registrationReason?: string; artistName?: string; socialUrl: string }) => Promise<{ error?: string }>;
+  setPassword: (password: string) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
