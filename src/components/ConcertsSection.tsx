@@ -23,11 +23,11 @@ export default function ConcertsSection() {
         return {
           id: typeof item.id === 'number' ? item.id : String(item.id ?? index),
           artist: String(item.artist ?? item.artist_name ?? item.name ?? ''),
-          tour: String(item.tour ?? item.title ?? item.event_name ?? ''),
+          tour: String(item.title ?? ''),
           date: formatDate(item.event_date ?? item.date ?? item.start_date),
           city: String(item.city ?? item.location ?? ''),
           type: String(item.category ?? item.type ?? item.event_type ?? ''),
-          image: String(item.poster_url ?? item.image_url ?? item.image ?? ''),
+          image: String(item.cover_url ?? ''),
         };
       }));
     };
