@@ -1,14 +1,9 @@
 import { useEffect, useState } from 'react';
 import { CalendarDays, MapPin } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { formatGeorgianDate } from '@/lib/georgianDate';
 
 interface ConcertEvent { id: string | number; artist: string; tour: string; date: string; city: string; type: string; image: string; }
-
-function formatDate(value: unknown): string {
-  if (!value) return '';
-  const date = new Date(String(value));
-  return Number.isNaN(date.getTime()) ? String(value) : new Intl.DateTimeFormat('ka-GE', { day: 'numeric', month: 'long', year: 'numeric' }).format(date);
-}
 
 export default function ConcertsSection() {
   const [events, setEvents] = useState<ConcertEvent[]>([]);
@@ -24,7 +19,7 @@ export default function ConcertsSection() {
           id: typeof item.id === 'number' ? item.id : String(item.id ?? index),
           artist: String(item.artist ?? item.artist_name ?? item.name ?? ''),
           tour: String(item.tour_name ?? item.title ?? ''),
-          date: formatDate(item.event_date ?? item.date ?? item.start_date),
+          date: formatGeorgianDate(item.event_date ?? item.date ?? item.start_date),
           city: String(item.city ?? item.location ?? ''),
           type: String(item.category ?? item.type ?? item.event_type ?? ''),
           image: String(item.cover_url ?? ''),
