@@ -2,7 +2,7 @@ import type { Release } from '@/types/music';
 
 export function normalizeCatalogRelease(row: Record<string, unknown>): Release {
   const item = row;
-  const score = Number(item.score ?? item.total_score ?? item.score_community ?? 0);
+  const score = Number(item.overall_score ?? item.score ?? item.total_score ?? item.score_community ?? 0);
   const joinedReviews = Array.isArray(item.reviews) ? item.reviews[0] as Record<string, unknown> | undefined : item.reviews as Record<string, unknown> | undefined;
   const parsedId = typeof item.id === 'number' ? item.id : String(item.id ?? '');
   return {
@@ -14,6 +14,7 @@ export function normalizeCatalogRelease(row: Record<string, unknown>): Release {
     release_type: item.release_type ? String(item.release_type) : undefined,
     year: Number(item.year ?? new Date().getFullYear()),
     score,
+    overall_score: item.overall_score == null ? undefined : Number(item.overall_score),
     valueTier: typeof item.value_tier === 'string' ? item.value_tier : undefined,
     score_community: item.score_community == null ? undefined : Number(item.score_community),
     community_score: item.community_score == null && item.score_community == null ? undefined : Number(item.community_score ?? item.score_community),

@@ -11,6 +11,7 @@ export interface Release {
   release_type?: string;
   year: number;
   score: number;
+  overall_score?: number;
   score_community?: number;
   community_score?: number;
   score_critics?: number;

@@ -54,3 +54,10 @@ test('score tiers retain every boundary', () => {
     assert.equal(scoreToTier(score), tier);
   }
 });
+
+test('release tier reads the overall score, not either role-group average', () => {
+  assert.equal(tiers.releaseValueTier({ overall_score: 85, community_score: 40, critics_score: 40 }), 'ლალი');
+  assert.equal(tiers.releaseValueTier({ overall_score: 49, community_score: 90, critics_score: 90 }), 'ვერცხლი');
+  assert.equal(tiers.releaseValueTier({ overall_score: 0, community_score: 90 }), null);
+  assert.equal(tiers.releaseValueTier({ community_score: 90 }), null);
+});

@@ -90,7 +90,7 @@ interface StoredReview {
 }
 
 function normalizeRelease(row: Record<string, unknown>): Release {
-  const score = Number(row.score ?? row.total_score ?? 0);
+  const score = Number(row.overall_score ?? row.score ?? row.total_score ?? 0);
   return {
     id: typeof row.id === 'number' ? row.id : String(row.id ?? ''),
     title: String(row.title ?? ''),
@@ -100,6 +100,7 @@ function normalizeRelease(row: Record<string, unknown>): Release {
     release_type: row.release_type ? String(row.release_type) : undefined,
     year: Number(row.year ?? new Date().getFullYear()),
     score,
+    overall_score: row.overall_score == null ? undefined : Number(row.overall_score),
     valueTier: typeof row.value_tier === 'string' ? row.value_tier : undefined,
     score_community: row.score_community == null ? undefined : Number(row.score_community),
     community_score: row.community_score == null ? undefined : Number(row.community_score),
@@ -610,7 +611,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
             <div className={`mt-5 inline-flex max-w-full items-center gap-2 rounded-lg px-3 py-2 ${releaseTierConfig?.badge ?? 'border border-zinc-700/50 bg-zinc-900/30 text-zinc-400'}`}>
               <Gem className={`h-4 w-4 shrink-0 ${releaseTierConfig?.icon ?? 'text-zinc-500'}`} />
               <div>
-                <p className="text-[10px] leading-tight text-gray-400">{valueTierHeading(activeRelease.release_type ?? activeRelease.type)}</p>
+                <p className="text-[10px] leading-tight text-gray-400">{valueTierHeading(activeRelease.release_type ?? activeRelease.type)}{boundReleaseTier ? ` · საერთო ქულა ${activeRelease.overall_score}/90` : ''}</p>
                 <p className="text-sm font-bold leading-tight">{boundReleaseTier ?? 'ჯერ არ შეფასებულა'}</p>
               </div>
             </div>

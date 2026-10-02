@@ -26,7 +26,9 @@ export function releaseCommunityScore(release: Pick<Release, 'community_score' |
   return null;
 }
 
-export function releaseValueTier(release: Pick<Release, 'community_score' | 'score_community'>): StrictValueTier | null {
-  const score = releaseCommunityScore(release);
-  return score === null ? null : valueTierFromScore(score);
+export function releaseValueTier(release: Pick<Release, 'overall_score'>): StrictValueTier | null {
+  const score = Number(release.overall_score);
+  return release.overall_score != null && Number.isFinite(score) && score > 0
+    ? valueTierFromScore(score)
+    : null;
 }
