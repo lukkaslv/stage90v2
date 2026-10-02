@@ -92,13 +92,14 @@ export interface Review {
   isVerified?: boolean;
 }
 
-export type PageId = 'releases' | 'top90' | 'achievements' | 'concerts';
+export type PageId = 'releases' | 'top90' | 'achievements' | 'concerts' | 'faq';
 
 export const categoryTabs: { id: PageId; label: string }[] = [
   { id: 'releases', label: 'რელიზები' },
   { id: 'top90', label: 'ტოპ-90' },
   { id: 'achievements', label: 'მიღწევები' },
   { id: 'concerts', label: 'კონცერტები' },
+  { id: 'faq', label: 'ხშირად დასმული კითხვები' },
 ];
 
 function computeValueTier(score: number): ValueTier {

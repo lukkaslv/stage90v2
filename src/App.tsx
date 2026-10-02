@@ -1,5 +1,5 @@
 import { lazy, Suspense, useRef, useState, useEffect, type MouseEvent } from 'react';
-import { ChevronLeft, ChevronRight, Sparkles, TrendingUp, Clock, Award } from 'lucide-react';
+import { ChevronLeft, ChevronRight, TrendingUp, Clock, Award } from 'lucide-react';
 import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import TopCarousel from '@/components/TopCarousel';
@@ -33,17 +33,18 @@ const Achievements = lazy(() => import('@/components/Achievements'));
 const ConcertsSection = lazy(() => import('@/components/ConcertsSection'));
 const AdminDashboard = lazy(() => import('@/components/AdminDashboard'));
 const PlatformAboutModal = lazy(() => import('@/components/PlatformAboutModal'));
+const FAQPage = lazy(() => import('@/components/FAQPage'));
 
 function pathState() {
   const path = window.location.pathname.replace(/\/$/, '') || '/';
   const section = (Object.entries(sectionPaths).find(([, value]) => value === path)?.[0] ?? null) as SectionId | null;
   const release = path.match(/^\/releases\/([^/]+)$/);
   const review = path.match(/^\/reviews\/([^/]+)$/);
-  const tab = path === '/top-90' ? 'top90' : path === '/achievements' ? 'achievements' : path === '/concerts' ? 'concerts' : 'releases';
+  const tab = path === '/top-90' ? 'top90' : path === '/achievements' ? 'achievements' : path === '/concerts' ? 'concerts' : path === '/faq' ? 'faq' : 'releases';
   return { section, release: release ? decodeURIComponent(release[1]) : null, review: review ? decodeURIComponent(review[1]) : null, tab: tab as PageId };
 }
 
-const tabPaths: Record<PageId, string> = { releases: '/', top90: '/top-90', achievements: '/achievements', concerts: '/concerts' };
+const tabPaths: Record<PageId, string> = { releases: '/', top90: '/top-90', achievements: '/achievements', concerts: '/concerts', faq: '/faq' };
 
 function AppContent() {
   const { user } = useAuth();
@@ -55,6 +56,7 @@ function AppContent() {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [showAbout, setShowAbout] = useState(false);
   const [activeTab, setActiveTab] = useState<PageId>(() => pathState().tab);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('stage90-sidebar-collapsed') === 'true');
   const [adminMode, setAdminMode] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const { releases: releaseCatalog, releaseById, latestReleases, topReleases, newNames, releaseCount, reviewCount, userReviewsMap, reviewVersion, commentVersion, onReviewSubmitted } = useReleaseCatalog(user?.id, refreshKey);
@@ -92,6 +94,11 @@ function AppContent() {
     });
   };
   const handleRefresh = () => setRefreshKey((key) => key + 1);
+  const toggleSidebar = () => setSidebarCollapsed((collapsed) => {
+    window.localStorage.setItem('stage90-sidebar-collapsed', String(!collapsed));
+    return !collapsed;
+  });
+  const contentClass = `min-w-0 min-h-screen pt-16 transition-[margin-left] duration-300 ease-out lg:pt-0 ${sidebarCollapsed ? 'lg:ml-[76px]' : 'lg:ml-72'}`;
   const startAddedReleasesDrag = (event: MouseEvent<HTMLDivElement>) => {
     const container = addedReleasesScrollRef.current;
     if (!container) return;
@@ -173,7 +180,8 @@ function AppContent() {
   if (selectedRelease) {
     return (
       <div className="min-h-screen bg-[#0a0a0c]">
-        <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} />
+        <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+        <div className={contentClass}>
         {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
         {maintenanceMap.releases?.is_maintenance
           ? <MaintenancePlaceholder tabTitle={maintenanceMap.releases.tab_title} customMessage={maintenanceMap.releases.message_geo} />
@@ -190,22 +198,26 @@ function AppContent() {
         {authMode && (
           <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>
         )}
+        </div>
       </div>
     );
   }
 
   if (selectedReview) {
     return <div className="min-h-screen bg-[#0a0a0c]">
-      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} />
+      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+      <div className={contentClass}>
       {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
       <ReviewDetail id={selectedReview} onReleaseClick={openRelease} onBack={returnFromRelease} />
       {authMode && <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>}
+      </div>
     </div>;
   }
 
   return (
     <div className="min-h-screen bg-[#0a0a0c]">
-      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} />
+      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+      <div className={contentClass}>
       {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
       {adminMode && user?.role === 'admin' ? <Suspense fallback={<SectionLoader />}><AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /></Suspense> : null}
 
@@ -225,6 +237,8 @@ function AppContent() {
         </main>
       )}
 
+      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'faq' && <Suspense fallback={<SectionLoader />}><FAQPage /></Suspense>}
+
       {!adminMode && !section && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'releases' && (
         <>
           {/* Hero banner */}
@@ -239,10 +253,6 @@ function AppContent() {
             />
             <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
               <div className="flex flex-col items-start gap-4">
-                <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/5 px-3 py-1">
-                  <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-                  <span className="text-xs font-medium text-cyan-300">ახალი სეზონი · 2026</span>
-                </div>
                 <div className="mb-5 max-w-2xl">
                   <div className="text-4xl font-semibold leading-none tracking-[0.12em] text-white sm:text-5xl md:text-6xl">
                     #STAGE90
@@ -365,6 +375,7 @@ function AppContent() {
       {authMode && (
         <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>
       )}
+      </div>
     </div>
   );
 }
