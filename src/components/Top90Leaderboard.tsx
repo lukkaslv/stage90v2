@@ -19,25 +19,25 @@ interface LeaderboardUser {
   rank: number;
   username: string;
   points: string;
-  hearts: number;
-  likes: number;
+  hearts?: number;
+  likes?: number;
   badgeColor: 'ruby' | 'emerald' | 'gold';
   avatarUrl: string;
 }
 
-const seasonFilters = ['შემოდგომა 26', 'ზაფხული 26', 'ყველა დრო'] as const;
-
 const initialPlatformStats = [
-  { label: 'მომხმარებლები სულ', value: '0', icon: Users },
-  { label: 'რეგისტრირებული ავტორები', value: '0', icon: Mic2 },
-  { label: 'ავტორთა მოწონებები', value: '0', icon: Heart },
-  { label: 'ავტორთა კომენტარები', value: '0', icon: MessageSquare },
-  { label: 'ალბომის ღირებულების გათვლა', value: '0', icon: Gem },
-  { label: 'რეცენზიები რელიზებზე', value: '0', icon: MessageSquare },
-  { label: 'შეფასებები რეცენზიის გარეშე', value: '0', icon: Star },
-  { label: 'სულ ტრეკები', value: '0', icon: Music2 },
-  { label: 'სულ ალბომები', value: '0', icon: Disc3 },
-  { label: 'სულ კონცერტები', value: '0', icon: Mic2 },
+  { label: 'მომხმარებლები სულ', value: '—', icon: Users },
+  { label: 'რეგისტრირებული ავტორები', value: '—', icon: Mic2 },
+  { label: 'ავტორთა რჩეულები', value: '—', icon: Heart },
+  { label: 'ავტორთა კომენტარები', value: '—', icon: MessageSquare },
+  { label: 'ალბომის ღირებულების გათვლა', value: '—', icon: Gem },
+  { label: 'რეცენზიები რელიზებზე', value: '—', icon: MessageSquare },
+  { label: 'შეფასებები რეცენზიის გარეშე', value: '—', icon: Star },
+  { label: 'სულ ტრეკები', value: '—', icon: Music2 },
+  { label: 'სულ რელიზები', value: '—', icon: Disc3 },
+  { label: 'სულ ალბომები', value: '—', icon: Disc3 },
+  { label: 'სულ მინიალბომები', value: '—', icon: Disc3 },
+  { label: 'სულ კონცერტები', value: '—', icon: Mic2 },
 ];
 
 const badgeStyles: Record<string, { ring: string; glow: string; label: string }> = {
@@ -83,16 +83,16 @@ function PodiumCard({ user, position }: { user: LeaderboardUser; position: 'cent
       </div>
 
       {/* Hearts */}
-      <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
+      {user.hearts != null && <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
         <Heart className="h-3 w-3 text-rose-400/60" />
         {user.hearts} გული
-      </div>
+      </div>}
     </div>
   );
 }
 
 function formatPoints(value: number) {
-  return value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toLocaleString();
+  return value.toLocaleString();
 }
 
 function mapProfileToLeaderboardUser(profile: Record<string, unknown>, rank: number): LeaderboardUser {
@@ -101,42 +101,52 @@ function mapProfileToLeaderboardUser(profile: Record<string, unknown>, rank: num
     rank,
     username: String(profile.display_name ?? profile.username ?? profile.artist_name ?? 'მომხმარებელი'),
     points: formatPoints(points),
-    hearts: Number(profile.hearts ?? profile.received_hearts ?? 0),
-    likes: Number(profile.likes ?? profile.total_likes ?? 0),
+    hearts: profile.hearts == null && profile.received_hearts == null ? undefined : Number(profile.hearts ?? profile.received_hearts),
+    likes: profile.likes == null && profile.total_likes == null ? undefined : Number(profile.likes ?? profile.total_likes),
     badgeColor: rank === 1 ? 'ruby' : rank === 2 ? 'emerald' : 'gold',
     avatarUrl: String(profile.avatar_url ?? profile.avatarUrl ?? ''),
   };
 }
 
 export default function Top90Leaderboard() {
-  const [season, setSeason] = useState<typeof seasonFilters[number]>('შემოდგომა 26');
   const [podiumUsers, setPodiumUsers] = useState<LeaderboardUser[]>([]);
   const [rankedUsers, setRankedUsers] = useState<LeaderboardUser[]>([]);
   const [platformStats, setPlatformStats] = useState(initialPlatformStats);
-  const podiumDisplayUsers: LeaderboardUser[] = [
-    podiumUsers[0] ?? { rank: 1, username: 'ადგილი 1', points: '—', hearts: 0, likes: 0, badgeColor: 'ruby', avatarUrl: '' },
-    podiumUsers[1] ?? { rank: 2, username: 'ადგილი 2', points: '—', hearts: 0, likes: 0, badgeColor: 'emerald', avatarUrl: '' },
-    podiumUsers[2] ?? { rank: 3, username: 'ადგილი 3', points: '—', hearts: 0, likes: 0, badgeColor: 'gold', avatarUrl: '' },
-  ];
+  const [loading, setLoading] = useState(true);
+  const [leaderboardError, setLeaderboardError] = useState(false);
 
   useEffect(() => {
     const client = supabase;
-    if (!client) return;
+    if (!client) { setLoading(false); setLeaderboardError(true); return; }
+    let cancelled = false;
 
     const loadTop90 = async () => {
-      const { data } = await client
+      const { data, error } = await client
         .from('profiles')
         .select('*')
         .order('community_points', { ascending: false })
-        .limit(10);
-
-      if (data && data.length > 0) {
+        .limit(90);
+      if (cancelled) return;
+      setLoading(false);
+      setLeaderboardError(Boolean(error));
+      if (!error && data) {
         const users = data.map((row, index) => mapProfileToLeaderboardUser(row as Record<string, unknown>, index + 1));
         setPodiumUsers(users.slice(0, 3));
-        setRankedUsers(users.slice(3, 10));
+        setRankedUsers(users.slice(3));
       }
+    };
 
-      const [{ count: profileCount }, { count: authorCount }, { count: pickCount }, { count: commentCount }, { count: calculationCount }, { count: reviewCount }, { count: ratingCount }, { data: releaseRows }, { count: releaseCount }, { count: concertCount }] = await Promise.all([
+    const loadStats = async () => {
+      const loadReleaseTypes = async () => {
+        const types: string[] = [];
+        for (let from = 0; ; from += 500) {
+          const { data, error } = await client.from('releases').select('release_type').eq('is_active', true).order('id').range(from, from + 499);
+          if (error || !data) return null;
+          types.push(...data.map((row) => String(row.release_type ?? '').trim().toLowerCase()));
+          if (data.length < 500) return types;
+        }
+      };
+      const [profiles, authors, picks, comments, calculations, reviews, ratings, releases, concerts] = await Promise.all([
         client.from('profiles').select('*', { count: 'exact', head: true }),
         client.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'author'),
         client.from('author_picks').select('*', { count: 'exact', head: true }),
@@ -144,56 +154,37 @@ export default function Top90Leaderboard() {
         client.from('release_calculations').select('*', { count: 'exact', head: true }),
         client.from('reviews').select('*', { count: 'exact', head: true }),
         client.from('ratings').select('*', { count: 'exact', head: true }),
-        client.from('releases').select('track_count').eq('is_active', true),
-        client.from('releases').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        loadReleaseTypes(),
         client.from('concerts').select('*', { count: 'exact', head: true }),
       ]);
-
-      setPlatformStats((current) => current.map((stat) => {
-        const trackCount = (releaseRows ?? []).reduce((sum, row) => sum + Number((row as { track_count?: number }).track_count ?? 0), 0);
-        if (stat.label === 'მომხმარებლები სულ') return { ...stat, value: (profileCount ?? 0).toLocaleString() };
-        if (stat.label === 'რეგისტრირებული ავტორები') return { ...stat, value: (authorCount ?? 0).toLocaleString() };
-        if (stat.label === 'ავტორთა მოწონებები') return { ...stat, value: (pickCount ?? 0).toLocaleString() };
-        if (stat.label === 'ავტორთა კომენტარები') return { ...stat, value: (commentCount ?? 0).toLocaleString() };
-        if (stat.label === 'ალბომის ღირებულების გათვლა') return { ...stat, value: (calculationCount ?? 0).toLocaleString() };
-        if (stat.label === 'რეცენზიები რელიზებზე') return { ...stat, value: (reviewCount ?? 0).toLocaleString() };
-        if (stat.label === 'შეფასებები რეცენზიის გარეშე') return { ...stat, value: (ratingCount ?? 0).toLocaleString() };
-        if (stat.label === 'სულ ტრეკები') return { ...stat, value: trackCount.toLocaleString() };
-        if (stat.label === 'სულ ალბომები') return { ...stat, value: (releaseCount ?? 0).toLocaleString() };
-        if (stat.label === 'სულ კონცერტები') return { ...stat, value: (concertCount ?? 0).toLocaleString() };
-        return stat;
-      }));
+      if (cancelled) return;
+      const releaseTypes = releases;
+      const countType = (types: string[]) => releaseTypes?.filter((type) => types.includes(type)).length;
+      const values: Record<string, number | null | undefined> = {
+        'მომხმარებლები სულ': profiles.error ? null : profiles.count,
+        'რეგისტრირებული ავტორები': authors.error ? null : authors.count,
+        'ავტორთა რჩეულები': picks.error ? null : picks.count,
+        'ავტორთა კომენტარები': comments.error ? null : comments.count,
+        'ალბომის ღირებულების გათვლა': calculations.error ? null : calculations.count,
+        'რეცენზიები რელიზებზე': reviews.error ? null : reviews.count,
+        'შეფასებები რეცენზიის გარეშე': ratings.error ? null : ratings.count,
+        'სულ ტრეკები': countType(['სინგლი', 'single', 'ტრეკი', 'track']),
+        'სულ რელიზები': releaseTypes?.length,
+        'სულ ალბომები': countType(['ალბომი', 'album']),
+        'სულ მინიალბომები': countType(['ep', 'ეპი']),
+        'სულ კონცერტები': concerts.error ? null : concerts.count,
+      };
+      setPlatformStats(initialPlatformStats.map((stat) => ({ ...stat, value: values[stat.label] == null ? '—' : Number(values[stat.label]).toLocaleString() })));
     };
 
     void loadTop90();
-  }, []);
-
-  useEffect(() => {
-    const client = supabase;
-    if (!client) return;
-    const refreshLeaderboard = async () => {
-      const { data } = await client.from('profiles').select('*').order('community_points', { ascending: false }).limit(10);
-      if (!data) return;
-      const users = data.map((row, index) => mapProfileToLeaderboardUser(row as Record<string, unknown>, index + 1));
-      setPodiumUsers(users.slice(0, 3));
-      setRankedUsers(users.slice(3, 10));
-    };
-    const adjustStat = (index: number, amount: number) => {
-      setPlatformStats((current) => current.map((stat, statIndex) => statIndex === index ? { ...stat, value: String(Math.max(0, Number(stat.value.replace(/,/g, '')) + amount)) } : stat));
-    };
-    const channel = client
-      .channel('top90-live-updates')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, (payload) => {
-        if (payload.eventType === 'INSERT') adjustStat(0, 1);
-        if (payload.eventType === 'DELETE') adjustStat(0, -1);
-        void refreshLeaderboard();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, (payload) => {
-        if (payload.eventType === 'INSERT') adjustStat(5, 1);
-        if (payload.eventType === 'DELETE') adjustStat(5, -1);
-      })
+    void loadStats();
+    const channel = client.channel('top90-live-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { void loadTop90(); void loadStats(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => { void loadStats(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'releases' }, () => { void loadStats(); })
       .subscribe();
-    return () => { void client.removeChannel(channel); };
+    return () => { cancelled = true; void client.removeChannel(channel); };
   }, []);
 
   return (
@@ -208,20 +199,7 @@ export default function Top90Leaderboard() {
         </div>
       </div>
 
-      {/* Season filter tabs */}
-      <div className="mb-8 flex gap-1 rounded-xl border border-[#1e1e24] bg-[#121215] p-1 w-fit">
-        {seasonFilters.map((s) => (
-          <button
-            key={s}
-            onClick={() => setSeason(s)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
-              season === s ? 'bg-cyan-400/10 text-cyan-400' : 'text-gray-500 hover:text-gray-300'
-            }`}
-          >
-            {s}
-          </button>
-        ))}
-      </div>
+      <p className="mb-8 text-sm text-gray-400">ყველა დრო · საზოგადოების ქულები</p>
 
       {/* Main layout: leaderboard + stats sidebar */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
@@ -229,21 +207,21 @@ export default function Top90Leaderboard() {
         <div className="space-y-6">
           {/* Podium */}
           <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-6 sm:p-8">
-            {podiumDisplayUsers.length === 3 ? (
+            {podiumUsers.length > 0 ? (
               <div className="flex items-end justify-center gap-4 sm:gap-8">
-                <PodiumCard user={podiumDisplayUsers[1]} position="left" />
-                <PodiumCard user={podiumDisplayUsers[0]} position="center" />
-                <PodiumCard user={podiumDisplayUsers[2]} position="right" />
+                {podiumUsers[1] && <PodiumCard user={podiumUsers[1]} position="left" />}
+                <PodiumCard user={podiumUsers[0]} position="center" />
+                {podiumUsers[2] && <PodiumCard user={podiumUsers[2]} position="right" />}
               </div>
             ) : (
-              <div className="py-10 text-center text-sm text-gray-500">ტოპ-90-ისთვის საკმარისი პროფილები ჯერ არ არის.</div>
+              <div className="py-10 text-center text-sm text-gray-500">{loading ? 'მონაცემები იტვირთება...' : leaderboardError ? 'რეიტინგის ჩატვირთვა ვერ მოხერხდა.' : 'რეიტინგში მონაწილეები ჯერ არ არიან.'}</div>
             )}
           </div>
 
-          {/* Ranked list 4-10 */}
+          {/* Ranked list */}
           <div className="rounded-xl border border-[#1e1e24] bg-[#121215] overflow-hidden">
             <div className="border-b border-[#1e1e24] px-5 py-3">
-              <h3 className="text-sm font-bold text-white">რეიტინგი 4-10</h3>
+              <h3 className="text-sm font-bold text-white">რეიტინგი 4–90</h3>
             </div>
             <div className="divide-y divide-[#1e1e24]">
               {rankedUsers.map((user) => {
@@ -275,10 +253,10 @@ export default function Top90Leaderboard() {
                     </span>
 
                     {/* Likes */}
-                    <span className="hidden sm:flex shrink-0 items-center gap-1 text-xs text-gray-500 w-20 justify-end">
+                    {user.likes != null && <span className="hidden sm:flex shrink-0 items-center gap-1 text-xs text-gray-500 w-20 justify-end">
                       <Heart className="h-3 w-3 text-rose-400/50" />
                       {user.likes.toLocaleString()}
-                    </span>
+                    </span>}
                   </div>
                 );
               })}

@@ -349,11 +349,11 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                       </span>
                     </div>
                     <p className="mb-3 text-xs leading-relaxed text-gray-400">
-                      ავტორის სტატუსის მისაღებად საჭიროა თქვენი ოფიციალური ან ვერიფიცირებული
-                      სოც. ქსელიდან გაგზავნოთ დასტური ჩვენს ელ-ფოსტაზე.
+                      ავტორის სტატუსის დასადასტურებლად თქვენი ოფიციალური ინსტაგრამის ანგარიშიდან
+                      გაუგზავნეთ შეტყობინება <a href="https://www.instagram.com/stage90.ge/" target="_blank" rel="noopener noreferrer" className="font-semibold text-violet-300 underline hover:text-violet-200">@stage90.ge</a>-ს.
                     </p>
                     <label className="mb-1.5 block text-sm font-medium text-gray-300">
-                      მიუთითეთ თქვენი სოც. ქსელის ან/და ელ-ფოსტის მისამართი, საიდანაც მივიღებთ დასტურს *
+                      მიუთითეთ ოფიციალური ინსტაგრამის ანგარიშის ბმული, საიდანაც შეტყობინებას გამოგვიგზავნით *
                     </label>
                     <div className="relative">
                       <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600" />
@@ -361,7 +361,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                         type="text"
                         value={verifyLink}
                         onChange={(e) => setVerifyLink(e.target.value)}
-                        placeholder="https:// ან ელ-ფოსტა"
+                        placeholder="https://www.instagram.com/თქვენი_ანგარიში/"
                         className={`${inputClass} pl-10`}
                       />
                     </div>
@@ -381,7 +381,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                       {sentVerification && <CheckCircle2 className="h-3.5 w-3.5 text-violet-400" />}
                     </button>
                     <span className="text-xs leading-relaxed text-gray-400">
-                      გავაგზავნე რეგისტრაციის დასტური ჩემი ოფიციალური/ვერიფიცირებული სოც. ქსელიდან *
+                      ჩემი ოფიციალური ინსტაგრამის ანგარიშიდან @stage90.ge-ს შეტყობინება გავუგზავნე *
                     </span>
                   </label>
                 </>

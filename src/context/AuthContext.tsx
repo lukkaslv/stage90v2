@@ -112,8 +112,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (data.user) {
       const profileRow: Record<string, unknown> = profile.role === 'user'
-        ? { id: data.user.id, role: 'user', display_name: profile.displayName, registration_reason: profile.registrationReason, is_verified: false }
-        : { id: data.user.id, role: 'author', artist_name: profile.artistName, verification_link: profile.verificationLink, is_verified: false };
+        ? { id: data.user.id, email: data.user.email ?? email, role: 'user', display_name: profile.displayName, registration_reason: profile.registrationReason, is_verified: false }
+        : { id: data.user.id, email: data.user.email ?? email, role: 'author', artist_name: profile.artistName, verification_link: profile.verificationLink, is_verified: false };
       const { error: profileError } = await supabase.from('profiles').upsert(profileRow, { onConflict: 'id' });
       if (profileError) return { error: profileError.message };
     }
