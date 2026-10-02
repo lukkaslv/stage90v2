@@ -364,7 +364,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
   const submitAuthorComment = async () => {
     if (!supabase || !user || !activeRelease || !authorCommentText.trim()) return;
     if (user.role !== 'author' && user.role !== 'admin') return;
-    const { error } = await supabase.from('author_comments').insert({ release_id: activeRelease.id, user_id: user.id, author_name: user.displayName, content: authorCommentText.trim() });
+    const { error } = await supabase.from('author_comments').insert({ release_id: activeRelease.id, author_id: user.id, comment_text: authorCommentText.trim() });
     setAuthorCommentMessage(error ? 'კომენტარის გამოქვეყნება ვერ მოხერხდა.' : 'კომენტარი გამოქვეყნდა.');
     if (!error) setAuthorCommentText('');
   };

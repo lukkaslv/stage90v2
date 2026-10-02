@@ -37,7 +37,8 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
         .range(from, to).returns<Record<string, unknown>[]>();
     }
     if (section === 'author-comments') {
-      return client.from('author_comments').select('*')
+      return client.from('author_comments').select('id, release_id, comment_text, created_at, profiles:author_id!inner(display_name, role, author_category, is_verified), releases:release_id!inner(id, title, artist_name, cover_url)')
+        .not('profiles.display_name', 'is', null).neq('profiles.display_name', '').neq('comment_text', '')
         .order('created_at', { ascending: false }).order('id', { ascending: false })
         .range(from, to).returns<Record<string, unknown>[]>();
     }
@@ -63,7 +64,7 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
         const release = joined(row.releases);
         const profile = joined(row.profiles);
         const title = section === 'author-picks' ? String(release?.title ?? '') :
-          section === 'author-comments' ? String(row.content ?? row.comment ?? row.text ?? '') :
+          section === 'author-comments' ? String(row.comment_text ?? '') :
             String(row.title ?? row.content ?? 'რეცენზია');
         const author = String(row.author_name ?? row.username ?? profile?.display_name ?? 'ავტორი');
         const releaseId = String(row.release_id ?? release?.id ?? '');
