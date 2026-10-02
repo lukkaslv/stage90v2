@@ -149,7 +149,7 @@ export default function Top90Leaderboard() {
       const [profiles, authors, picks, comments, calculations, reviews, ratings, releases, concerts] = await Promise.all([
         client.from('profiles').select('*', { count: 'exact', head: true }),
         client.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'author'),
-        client.from('author_picks').select('*', { count: 'exact', head: true }),
+        client.from('review_author_likes').select('*', { count: 'exact', head: true }),
         client.from('author_comments').select('*', { count: 'exact', head: true }),
         client.from('release_calculations').select('*', { count: 'exact', head: true }),
         client.from('reviews').select('*', { count: 'exact', head: true }),

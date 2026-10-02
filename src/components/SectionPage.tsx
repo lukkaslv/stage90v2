@@ -32,7 +32,7 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
       });
     }
     if (section === 'author-picks') {
-      return client.from('author_picks').select('*, releases:release_id(id, title, artist_name, cover_url, release_type)')
+      return client.from('review_author_likes').select('id, created_at, profiles:author_id!inner(display_name, role, author_category, is_verified), reviews:review_id!inner(release_id, releases:release_id!inner(id, title, artist_name, cover_url, release_type))')
         .order('created_at', { ascending: false }).order('id', { ascending: false })
         .range(from, to).returns<Record<string, unknown>[]>();
     }
@@ -61,13 +61,14 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
       {releases.map((release) => <ReleaseCard key={String(release.id)} release={release} onClick={onReleaseClick} />)}
     </div> : <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {rows.map((row) => {
-        const release = joined(row.releases);
+        const likedReview = section === 'author-picks' ? joined(row.reviews) : undefined;
+        const release = likedReview ? joined(likedReview.releases) : joined(row.releases);
         const profile = joined(row.profiles);
         const title = section === 'author-picks' ? String(release?.title ?? '') :
           section === 'author-comments' ? String(row.comment_text ?? '') :
             String(row.title ?? row.content ?? 'რეცენზია');
         const author = String(row.author_name ?? row.username ?? profile?.display_name ?? 'ავტორი');
-        const releaseId = String(row.release_id ?? release?.id ?? '');
+        const releaseId = String(row.release_id ?? likedReview?.release_id ?? release?.id ?? '');
         const isReview = section === 'reviews' || section === 'media-reviews';
         return <article key={String(row.id)} className="min-w-0 rounded-xl border border-[#24242c] bg-[#121215] p-4">
           <div className="mb-3 flex items-center gap-2 text-sm text-gray-300">
