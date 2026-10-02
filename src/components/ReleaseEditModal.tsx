@@ -4,12 +4,12 @@ import { supabase } from '@/lib/supabase';
 
 type ReleaseRow = Record<string, unknown> & { id: string | number };
 interface ProfileRow { id: string; display_name: string | null; email: string | null; role: string; }
-interface TrackRow { id: string | number; title: string; artist_name: string | null; cover_url: string | null; parent_id?: string | null; track_number?: number | null; }
+interface TrackRow { id: string | number; title: string; artist_name: string | null; cover_url: string | null; release_type?: string; parent_id?: string | null; track_number?: number | null; }
 interface AlbumRow { id: string | number; title: string; release_type: string; }
 interface ReleaseEditModalProps { release: Record<string, unknown>; onClose: () => void; onSaved: (release: ReleaseRow) => void; onRefresh?: () => void; }
 const inputClass = 'mt-1 w-full rounded-lg border border-[#2a2a32] bg-[#0b0b0e] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-400/60';
 const textValue = (item: Record<string, unknown>, key: string, fallback = '') => String(item[key] ?? fallback);
-const isBundleType = (format: string) => ['ალბომი', 'EP', 'album'].includes(format.toLowerCase());
+const isBundleType = (format: string) => ['ალბომი', 'ep', 'album'].includes(format.trim().toLowerCase());
 
 export default function ReleaseEditModal({ release, onClose, onSaved, onRefresh }: ReleaseEditModalProps) {
   const [title, setTitle] = useState(textValue(release, 'title'));
@@ -41,14 +41,14 @@ export default function ReleaseEditModal({ release, onClose, onSaved, onRefresh 
       const [{ data: profileRows }, { data: albumRows }, { data: standaloneRows }, { data: existingChildRows }] = await Promise.all([
         client.from('profiles').select('id, display_name, email, role').order('display_name', { ascending: true }),
         client.from('releases').select('id, title, release_type').in('release_type', ['ალბომი', 'EP', 'album']).neq('id', releaseId),
-        client.from('releases').select('id, title, artist_name, cover_url, parent_id, track_number').is('parent_id', null).eq('is_active', true).neq('id', releaseId),
+        client.from('releases').select('id, title, artist_name, cover_url, release_type, parent_id, track_number').is('parent_id', null).eq('is_active', true).neq('id', releaseId),
         client.from('releases').select('id, title, artist_name, cover_url, parent_id, track_number').eq('parent_id', releaseId).order('track_number', { ascending: true }),
       ]);
       if (cancelled) return;
       setProfiles((profileRows ?? []) as ProfileRow[]);
       setAlbums((albumRows ?? []) as AlbumRow[]);
       const currentChildren = (existingChildRows ?? []) as TrackRow[];
-      const standalone = (standaloneRows ?? []) as TrackRow[];
+      const standalone = ((standaloneRows ?? []) as TrackRow[]).filter((row) => !isBundleType(row.release_type ?? ''));
       const merged = [...currentChildren, ...standalone].filter((row, index, rows) => rows.findIndex((candidate) => String(candidate.id) === String(row.id)) === index);
       setTracks(merged);
       setSelectedTrackIds(currentChildren.sort((a, b) => Number(a.track_number ?? 0) - Number(b.track_number ?? 0)).map((track) => String(track.id)));
@@ -83,12 +83,20 @@ export default function ReleaseEditModal({ release, onClose, onSaved, onRefresh 
       const selected = new Set(desired);
       const oldChildren = tracks.filter((track) => String(track.parent_id ?? '') === releaseId);
       const changes = [
-        ...oldChildren.filter((track) => !selected.has(String(track.id))).map((track) => client.from('releases').update({ parent_id: null, track_number: null }).eq('id', track.id)),
-        ...desired.map((id, index) => client.from('releases').update({ parent_id: data.id, track_number: index + 1 }).eq('id', id)),
+        ...oldChildren.filter((track) => !selected.has(String(track.id))).map((track) => ({ id: String(track.id), parentId: null, trackNumber: null })),
+        ...desired.map((id, index) => ({ id, parentId: String(data.id), trackNumber: index + 1 })),
       ];
-      const results = await Promise.all(changes);
-      const childError = results.find((result) => result.error)?.error;
-      if (childError) { setErrorMessage(`ტრეკების სიის განახლება ვერ მოხერხდა: ${childError.message}`); setSaving(false); return; }
+      for (const change of changes) {
+        const { data: updated, error: childError } = await client.from('releases')
+          .update({ parent_id: change.parentId, track_number: change.trackNumber })
+          .eq('id', change.id).select('id').maybeSingle();
+        if (childError || !updated) {
+          setErrorMessage(`ტრეკების სიის განახლება ვერ მოხერხდა: ${childError?.message ?? 'ტრეკი ვერ განახლდა.'}`);
+          setSaving(false);
+          onRefresh?.();
+          return;
+        }
+      }
     }
 
     setSuccessMessage('რელიზის მონაცემები წარმატებით განახლდა!');

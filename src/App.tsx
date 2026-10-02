@@ -1,22 +1,20 @@
-import { useRef, useState, useEffect, type MouseEvent } from 'react';
+import { lazy, Suspense, useRef, useState, useEffect, type MouseEvent } from 'react';
 import { ChevronLeft, ChevronRight, Sparkles, TrendingUp, Clock, Award } from 'lucide-react';
 import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import TopCarousel from '@/components/TopCarousel';
 import ReleaseCard from '@/components/ReleaseCard';
-import ReleaseDetail from '@/components/ReleaseDetail';
-import AuthModal from '@/components/AuthModal';
-import Top90Leaderboard from '@/components/Top90Leaderboard';
-import Achievements from '@/components/Achievements';
 import MediaReviews from '@/components/MediaReviews';
 import RecentReviewsFeed from '@/components/RecentReviewsFeed';
-import ConcertsSection from '@/components/ConcertsSection';
 import Top15Daily from '@/components/Top15Daily';
 import AuthorsPicks from '@/components/AuthorsPicks';
 import AuthorComments from '@/components/AuthorComments';
 import NewNamesSection from '@/components/NewNamesSection';
-import AdminDashboard from '@/components/AdminDashboard';
-import PlatformAboutModal from '@/components/PlatformAboutModal';
+import SectionLoader from '@/components/SectionLoader';
+import SectionPage from '@/components/SectionPage';
+import { sectionPaths, type SectionId } from '@/lib/sectionRoutes';
+import ReviewDetail from '@/components/ReviewDetail';
+import { useReleaseCatalog } from '@/hooks/useReleaseCatalog';
 import type { Release, PageId } from '@/types/music';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/auth-context';
@@ -27,26 +25,71 @@ import { maintenanceMapFromRows, type MaintenanceMap, type MaintenanceRecord } f
 
 type AuthMode = 'login' | 'register';
 
+const ReleaseDetail = lazy(() => import('@/components/ReleaseDetail'));
+const AuthModal = lazy(() => import('@/components/AuthModal'));
+const Top90Leaderboard = lazy(() => import('@/components/Top90Leaderboard'));
+const Achievements = lazy(() => import('@/components/Achievements'));
+const ConcertsSection = lazy(() => import('@/components/ConcertsSection'));
+const AdminDashboard = lazy(() => import('@/components/AdminDashboard'));
+const PlatformAboutModal = lazy(() => import('@/components/PlatformAboutModal'));
+
+function pathState() {
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  const section = (Object.entries(sectionPaths).find(([, value]) => value === path)?.[0] ?? null) as SectionId | null;
+  const release = path.match(/^\/releases\/([^/]+)$/);
+  const review = path.match(/^\/reviews\/([^/]+)$/);
+  const tab = path === '/top-90' ? 'top90' : path === '/achievements' ? 'achievements' : path === '/concerts' ? 'concerts' : 'releases';
+  return { section, release: release ? decodeURIComponent(release[1]) : null, review: review ? decodeURIComponent(review[1]) : null, tab: tab as PageId };
+}
+
+const tabPaths: Record<PageId, string> = { releases: '/', top90: '/top-90', achievements: '/achievements', concerts: '/concerts' };
+
 function AppContent() {
   const { user } = useAuth();
   const { startTransition } = usePageLoading();
-  const [selectedRelease, setSelectedRelease] = useState<Release | string | null>(null);
+  const [selectedRelease, setSelectedRelease] = useState<Release | string | null>(() => pathState().release);
+  const [selectedReview, setSelectedReview] = useState<string | null>(() => pathState().review);
+  const [section, setSection] = useState<SectionId | null>(() => pathState().section);
+  const [releaseHistory, setReleaseHistory] = useState<Array<Release | string>>([]);
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [showAbout, setShowAbout] = useState(false);
-  const [activeTab, setActiveTab] = useState<PageId>('releases');
+  const [activeTab, setActiveTab] = useState<PageId>(() => pathState().tab);
   const [adminMode, setAdminMode] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [releaseCatalog, setReleaseCatalog] = useState<Release[]>([]);
-  const [releaseCount, setReleaseCount] = useState(0);
-  const [reviewCount, setReviewCount] = useState(0);
-  const [userReviewsMap, setUserReviewsMap] = useState<Record<string, number>>({});
+  const { releases: releaseCatalog, releaseById, latestReleases, topReleases, newNames, releaseCount, reviewCount, userReviewsMap, reviewVersion, commentVersion, onReviewSubmitted } = useReleaseCatalog(user?.id, refreshKey);
   const [maintenanceMap, setMaintenanceMap] = useState<MaintenanceMap>({});
   const addedReleasesScrollRef = useRef<HTMLDivElement>(null);
   const addedReleasesDraggingRef = useRef(false);
   const addedReleasesDragStartRef = useRef({ x: 0, scrollLeft: 0 });
-  const topCatalog = releaseCatalog;
-  const latestCatalog = releaseCatalog;
-  const openRelease = (nextRelease: Release | string) => { void startTransition(() => setSelectedRelease(nextRelease)); };
+  const topCatalog = topReleases;
+  const latestCatalog = latestReleases;
+  const navigate = (path: string) => {
+    if (window.location.pathname !== path) window.history.pushState({ stage90: true }, '', path);
+    const next = pathState();
+    setSelectedRelease(next.release);
+    setSelectedReview(next.review);
+    setSection(next.section);
+    setActiveTab(next.tab);
+    setAdminMode(false);
+  };
+  const openRelease = (nextRelease: Release | string) => { void startTransition(() => { setReleaseHistory([]); navigate(`/releases/${encodeURIComponent(String(typeof nextRelease === 'string' ? nextRelease : nextRelease.id))}`); setSelectedRelease(nextRelease); }); };
+  const openTrackRelease = (nextRelease: Release) => { void startTransition(() => { if (selectedRelease) setReleaseHistory((history) => [...history, selectedRelease]); navigate(`/releases/${encodeURIComponent(String(nextRelease.id))}`); setSelectedRelease(nextRelease); }); };
+  const returnFromRelease = () => { if (window.history.state?.stage90) window.history.back(); else navigate('/'); };
+  const openReview = (id: string) => { void startTransition(() => navigate(`/reviews/${encodeURIComponent(id)}`)); };
+  const openSection = (next: SectionId) => { void startTransition(() => navigate(sectionPaths[next])); };
+  const handleTabChange = (tab: PageId) => {
+    void startTransition(() => {
+      setReleaseHistory([]);
+      navigate(tabPaths[tab]);
+    });
+  };
+  const handleAdminOpen = () => {
+    void startTransition(() => {
+      setSelectedRelease(null);
+      setReleaseHistory([]);
+      setAdminMode(true);
+    });
+  };
   const handleRefresh = () => setRefreshKey((key) => key + 1);
   const startAddedReleasesDrag = (event: MouseEvent<HTMLDivElement>) => {
     const container = addedReleasesScrollRef.current;
@@ -110,131 +153,71 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    const client = supabase;
-    if (!client) return;
-
-    const loadReleases = async () => {
-      const { data, error } = await client
-        .from('releases')
-        .select('*, reviews(count)')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false });
-
-      const [{ count: liveReleaseCount }, { count: liveReviewCount }, { data: personalReviews }] = await Promise.all([
-        client.from('releases').select('*', { count: 'exact', head: true }).eq('is_active', true),
-        client.from('reviews').select('*', { count: 'exact', head: true }),
-        user?.id ? client.from('reviews').select('release_id, total_score').eq('user_id', user.id) : Promise.resolve({ data: [] as { release_id: string | number; total_score: number }[] }),
-      ]);
-      const personalScores = new Map((personalReviews ?? []).map((row) => [String((row as Record<string, unknown>).release_id), Number((row as Record<string, unknown>).total_score ?? 0)]));
-      setUserReviewsMap(Object.fromEntries(personalScores));
-
-      setReleaseCount(liveReleaseCount ?? 0);
-      setReviewCount(liveReviewCount ?? 0);
-      if (error || !data) return;
-
-      const normalized = data.map((row) => {
-        const item = row as Record<string, unknown>;
-        const score = Number(item.score ?? item.total_score ?? 0);
-        const joinedReviews = Array.isArray(item.reviews) ? item.reviews[0] as Record<string, unknown> | undefined : item.reviews as Record<string, unknown> | undefined;
-        const parsedId = typeof item.id === 'number' ? item.id : String(item.id ?? '');
-        return {
-          id: parsedId,
-          title: String(item.title ?? ''),
-          artist: String(item.artist ?? item.artist_name ?? ''),
-          coverUrl: String(item.cover_url ?? item.coverUrl ?? ''),
-          type: String(item.release_type ?? item.type ?? '') as Release['type'],
-          release_type: item.release_type ? String(item.release_type) : undefined,
-          year: Number(item.year ?? new Date().getFullYear()),
-          score,
-          valueTier: typeof item.value_tier === 'string' ? item.value_tier : undefined,
-          score_community: item.score_community == null ? undefined : Number(item.score_community),
-          community_score: item.community_score == null ? undefined : Number(item.community_score),
-          score_critics: item.score_critics == null ? undefined : Number(item.score_critics),
-          critics_score: item.critics_score == null ? undefined : Number(item.critics_score),
-          reviewCount: Number(item.reviews_count ?? item.total_reviews_count ?? item.review_count ?? item.reviewCount ?? joinedReviews?.count ?? 0),
-          reviews_count: Number(item.reviews_count ?? item.total_reviews_count ?? item.review_count ?? item.reviewCount ?? joinedReviews?.count ?? 0),
-          total_reviews_count: Number(item.total_reviews_count ?? item.reviews_count ?? item.review_count ?? item.reviewCount ?? joinedReviews?.count ?? 0),
-          reviews: Array.isArray(item.reviews) ? item.reviews : undefined,
-          value_tier: typeof item.value_tier === 'string' ? item.value_tier : undefined,
-          commentCount: Number(item.comment_count ?? item.commentCount ?? item.comments ?? 0),
-          trackCount: Number(item.track_count ?? item.trackCount ?? 0),
-          genre: String(item.genre ?? ''),
-          season: item.season ? String(item.season) : undefined,
-          scores: {
-            community: Number(item.community_score ?? item.score_community ?? score - 2),
-            critics: Number(item.critics_score ?? item.score_critics ?? score - 3),
-            personal: Number(item.personal_score ?? score),
-          },
-          personalScore: personalScores.get(String(parsedId)) ?? (item.personal_score == null ? undefined : Number(item.personal_score)),
-          is_new_name: item.is_new_name === true,
-          is_freshman: item.is_freshman === true,
-          youtube_url: item.youtube_url ? String(item.youtube_url) : undefined,
-          streaming_url: item.streaming_url ? String(item.streaming_url) : undefined,
-          audio_url: item.audio_url ? String(item.audio_url) : undefined,
-        } satisfies Release;
-      }).filter((release) => Boolean(release.id) && release.title && release.coverUrl);
-
-      setReleaseCatalog(normalized);
+    const onPop = () => {
+      const next = pathState();
+      setSelectedRelease(next.release);
+      setSelectedReview(next.review);
+      setSection(next.section);
+      setActiveTab(next.tab);
+      setAdminMode(false);
     };
-
-    void loadReleases();
-  }, [refreshKey, user?.id]);
-
-  useEffect(() => {
-    if (selectedRelease) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [selectedRelease]);
-
-  useEffect(() => {
-    const client = supabase;
-    if (!client) return;
-    const channel = client.channel('homepage-release-refresh').on('postgres_changes', { event: '*', schema: 'public', table: 'releases' }, () => handleRefresh()).on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => handleRefresh()).subscribe();
-    return () => { void client.removeChannel(channel); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
   }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [activeTab]);
+  }, [activeTab, selectedRelease, selectedReview, section, adminMode]);
 
   if (selectedRelease) {
     return (
       <div className="min-h-screen bg-[#0a0a0c]">
-        <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => void startTransition(() => setSelectedRelease(null))} activeTab={activeTab} onTabChange={(tab) => void startTransition(() => setActiveTab(tab))} onAdminOpen={() => void startTransition(() => setAdminMode(true))} />
-        {showAbout && <PlatformAboutModal onClose={() => setShowAbout(false)} />}
+        <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} />
+        {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
         {maintenanceMap.releases?.is_maintenance
           ? <MaintenancePlaceholder tabTitle={maintenanceMap.releases.tab_title} customMessage={maintenanceMap.releases.message_geo} />
-          : <ReleaseDetail
+          : <Suspense fallback={<SectionLoader />}><ReleaseDetail
+            key={typeof selectedRelease === 'string' ? selectedRelease : String(selectedRelease.id)}
             release={selectedRelease}
-            onBack={() => { void startTransition(() => { setSelectedRelease(null); handleRefresh(); }); }}
+            onBack={returnFromRelease}
+            onOpenRelease={openTrackRelease}
+            backToRelease={releaseHistory.length > 0}
             onOpenAuth={() => setAuthMode('login')}
-            onReviewSubmitted={handleRefresh}
-          />}
+            onReviewSubmitted={onReviewSubmitted}
+          /></Suspense>}
         {authMode && (
-          <AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} />
+          <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>
         )}
       </div>
     );
   }
 
+  if (selectedReview) {
+    return <div className="min-h-screen bg-[#0a0a0c]">
+      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} />
+      <ReviewDetail id={selectedReview} onReleaseClick={openRelease} onBack={returnFromRelease} />
+    </div>;
+  }
+
   return (
     <div className="min-h-screen bg-[#0a0a0c]">
-      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => void startTransition(() => setSelectedRelease(null))} activeTab={activeTab} onTabChange={(tab) => void startTransition(() => setActiveTab(tab))} onAdminOpen={() => void startTransition(() => setAdminMode(true))} />
-      {showAbout && <PlatformAboutModal onClose={() => setShowAbout(false)} />}
-      {adminMode && user?.role === 'admin' ? <AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /> : null}
+      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} />
+      {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
+      {adminMode && user?.role === 'admin' ? <Suspense fallback={<SectionLoader />}><AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /></Suspense> : null}
 
       {!adminMode && maintenanceMap[activeTab]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[activeTab].tab_title} customMessage={maintenanceMap[activeTab].message_geo} />}
-      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'top90' && <Top90Leaderboard />}
+      {!adminMode && section && !maintenanceMap.releases?.is_maintenance && <SectionPage key={section} section={section} onReleaseClick={openRelease} onReviewClick={openReview} />}
+      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'top90' && <Suspense fallback={<SectionLoader />}><Top90Leaderboard /></Suspense>}
 
-      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'achievements' && <Achievements />}
+      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'achievements' && <Suspense fallback={<SectionLoader />}><Achievements /></Suspense>}
 
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'concerts' && (
         <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
-          <ConcertsSection />
+          <Suspense fallback={<SectionLoader />}><ConcertsSection /></Suspense>
         </main>
       )}
 
-      {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'releases' && (
+      {!adminMode && !section && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'releases' && (
         <>
           {/* Hero banner */}
           <section className="relative overflow-hidden border-b border-[#1e1e24]">
@@ -253,12 +236,8 @@ function AppContent() {
                   <span className="text-xs font-medium text-cyan-300">ახალი სეზონი · 2026</span>
                 </div>
                 <div className="mb-5 max-w-2xl">
-                  <div className="flex items-center gap-3 text-4xl font-black leading-none tracking-tight text-white sm:text-5xl md:text-6xl">
-                    <span>STAGE</span>
-                    <svg viewBox="0 0 160 80" role="img" aria-label="90 infinity mark" className="h-10 w-auto drop-shadow-[0_0_24px_rgba(123,61,255,0.45)] sm:h-14 md:h-16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <defs><linearGradient id="stageInfinityGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#00F2FE" /><stop offset="50%" stopColor="#7B3DFF" /><stop offset="100%" stopColor="#FF2ED1" /></linearGradient></defs>
-                      <path d="M48 22 C 24 22, 12 30, 12 40 C 12 50, 24 58, 48 58 C 72 58, 88 22, 112 22 C 136 22, 148 30, 148 40 C 148 50, 136 58, 112 58 C 88 58, 72 22, 48 22 Z" stroke="url(#stageInfinityGrad)" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                  <div className="text-4xl font-semibold leading-none tracking-[0.12em] text-white sm:text-5xl md:text-6xl">
+                    #STAGE90
                   </div>
                   <p className="mt-5 text-sm font-medium tracking-[0.35em] text-[#F5F5F7]/80 sm:text-base">ეს არის კავშირი</p>
                 </div>
@@ -298,13 +277,16 @@ function AppContent() {
 
           {/* Main content */}
           <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
-            <Top15Daily releases={releaseCatalog} onReleaseClick={openRelease} userReviewsMap={userReviewsMap} />
+            <Top15Daily onReleaseClick={openRelease} />
 
-            <AuthorsPicks releases={releaseCatalog} onReleaseClick={openRelease} />
+            <button type="button" onClick={() => openSection('author-picks')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+            <AuthorsPicks releaseById={releaseById} onReleaseClick={openRelease} preview />
 
-            <AuthorComments key={`author-comments-${refreshKey}`} releases={releaseCatalog} onReleaseClick={openRelease} />
+            <button type="button" onClick={() => openSection('author-comments')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+            <AuthorComments refreshVersion={refreshKey + reviewVersion + commentVersion} releaseById={releaseById} onReleaseClick={openRelease} preview />
 
             {/* Section 1: Top daily releases */}
+            <button type="button" onClick={() => handleTabChange('top90')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
             <TopCarousel releases={topCatalog} onReleaseClick={openRelease} userReviewsMap={userReviewsMap} />
 
             {/* Section 2: Latest releases */}
@@ -316,14 +298,12 @@ function AppContent() {
                   </span>
                   <h2 className="text-xl font-bold text-white sm:text-2xl">დამატებული რელიზები</h2>
                 </div>
-                <button className="text-sm font-medium text-gray-500 transition-colors hover:text-violet-400">
-                  ყველას ნახვა →
-                </button>
+                <button type="button" onClick={() => openSection('all-releases')} className="text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
               </div>
               <div className="group relative">
                 <button type="button" onClick={() => moveAddedReleases(-530)} aria-label="წინა რელიზები" className="absolute left-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/10 bg-[#0a0a0c]/90 p-2 text-white shadow-xl transition hover:border-cyan-300/60 hover:text-cyan-300 md:block"><ChevronLeft className="h-5 w-5" /></button>
                 <div ref={addedReleasesScrollRef} onMouseDown={startAddedReleasesDrag} onMouseMove={moveAddedReleasesDrag} onMouseUp={stopAddedReleasesDrag} onMouseLeave={stopAddedReleasesDrag} onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="flex cursor-grab items-stretch gap-4 overflow-x-auto overflow-y-hidden scroll-smooth scrollbar-none py-2 px-1 select-none active:cursor-grabbing" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                {latestCatalog.map((release) => (
+                {latestCatalog.slice(0, 6).map((release) => (
                   <div key={release.id} className="w-[220px] shrink-0 flex flex-col sm:w-[240px] md:w-[250px]">
                     <ReleaseCard release={release} onClick={openRelease} userReviewsMap={userReviewsMap} />
                   </div>
@@ -333,11 +313,13 @@ function AppContent() {
               </div>
             </section>
 
-            <MediaReviews key={`media-reviews-${refreshKey}`} releases={releaseCatalog} onReleaseClick={openRelease} />
+            <button type="button" onClick={() => openSection('media-reviews')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+            <MediaReviews refreshVersion={refreshKey + reviewVersion} releaseById={releaseById} onReviewClick={openReview} />
 
-            <RecentReviewsFeed key={`recent-reviews-${refreshKey}`} releases={releaseCatalog} onReleaseClick={openRelease} />
+            <button type="button" onClick={() => openSection('reviews')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+            <RecentReviewsFeed releaseById={releaseById} releases={releaseCatalog} onReleaseClick={openRelease} onReviewClick={openReview} />
 
-            <NewNamesSection releases={releaseCatalog} onReleaseClick={openRelease} />
+            <NewNamesSection releases={newNames} onReleaseClick={openRelease} onViewAll={() => openSection('new-names')} />
           </main>
         </>
       )}
@@ -349,7 +331,7 @@ function AppContent() {
             <p className="hidden text-xs text-gray-600">
               © 2026 რზტ — რისა ზა თვორჩესტვო. ყველა უფლება დაცულია.
             </p>
-            <p className="text-xs text-gray-600">© 2026 Stage 90. ეს არის კავშირი. ყველა უფლება დაცულია.</p>
+            <p className="text-xs text-gray-600">© 2026 #STAGE90. ეს არის კავშირი. ყველა უფლება დაცულია.</p>
             <div className="flex items-center gap-4 text-xs text-gray-600">
               <button className="transition-colors hover:text-gray-400">წესები</button>
               <button className="transition-colors hover:text-gray-400">კონტაქტი</button>
@@ -360,7 +342,7 @@ function AppContent() {
       </footer>
 
       {authMode && (
-        <AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} />
+        <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>
       )}
     </div>
   );

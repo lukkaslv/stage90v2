@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Search, MessageSquare, LogIn, UserPlus, LogOut, Shield } from 'lucide-react';
 import { categoryTabs, type PageId } from '@/types/music';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
-import MediaReleaseModal from '@/components/MediaReleaseModal';
+import SectionLoader from '@/components/SectionLoader';
 import RoleBadge, { VerificationBadge } from '@/components/RoleBadge';
+
+const MediaReleaseModal = lazy(() => import('@/components/MediaReleaseModal'));
 
 interface NavbarProps {
   onOpenAuth: (mode: 'login' | 'register') => void;
@@ -41,24 +43,8 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
-          <button type="button" onClick={onBrandClick} className="flex items-center gap-2.5 shrink-0 text-left">
-            <div className="relative">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-violet-500 glow-cyan">
-                <svg viewBox="0 0 160 80" aria-label="90 infinity mark" className="h-7 w-7" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <defs><linearGradient id="navbarInfinityGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stopColor="#00F2FE" /><stop offset="50%" stopColor="#7B3DFF" /><stop offset="100%" stopColor="#FF2ED1" /></linearGradient></defs>
-                  <path d="M48 22 C 24 22, 12 30, 12 40 C 12 50, 24 58, 48 58 C 72 58, 88 22, 112 22 C 136 22, 148 30, 148 40 C 148 50, 136 58, 112 58 C 88 58, 72 22, 48 22 Z" stroke="url(#navbarInfinityGrad)" strokeWidth="15" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-              </div>
-            </div>
-            <div className="hidden sm:block">
-              <span className="text-lg font-extrabold tracking-tight text-white">Stage 90</span>
-              <span className="hidden text-lg font-extrabold tracking-tight text-white">
-                რზ<span className="text-cyan-400">ტ</span>
-              </span>
-              <span className="hidden ml-1.5 text-[10px] font-medium uppercase tracking-wider text-gray-500">
-                რისა ზა თვორჩესტვო
-              </span>
-            </div>
+          <button type="button" onClick={onBrandClick} aria-label="#STAGE90" className="shrink-0 text-left font-sans text-base font-semibold tracking-[0.12em] text-white sm:text-lg">
+            #STAGE90
           </button>
 
           {/* Search bar */}
@@ -72,7 +58,7 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
           </div>
 
           {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="flex shrink-0 items-center gap-2 self-center sm:gap-3">
             <button onClick={onOpenAbout} className="hidden sm:flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-gray-400 transition-colors hover:text-gray-200 hover:bg-[#121215]">
               <MessageSquare className="h-4 w-4" />
               კავშირი
@@ -82,30 +68,33 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
+                  aria-expanded={showUserMenu}
+                  aria-haspopup="menu"
                   className="flex items-center gap-2 rounded-lg border border-[#2a2a32] px-3 py-2 text-sm font-medium text-gray-200 transition-colors hover:border-gray-500"
                 >
                   {user.isVerified && <VerificationBadge />}
                   <span className="hidden sm:inline max-w-[120px] truncate">{user.displayName}</span>
                   <RoleBadge role={user.role} category={user.authorCategory} isVerified={user.isVerified} />
                 </button>
-                {(user.role === 'media' || user.role === 'admin') && <div className="mt-1 flex flex-col items-end"><span className="text-[10px] text-teal-300">{user.role === 'media' ? `დარჩენილია: ${Math.max(0, 5 - user.mediaMonthlyReleases)}` : 'რელიზების შეუზღუდავი მართვა'}</span><button onClick={() => user.role === 'media' && user.mediaMonthlyReleases >= 5 ? window.alert('ამ თვეში რელიზების ლიმიტი ამოწურულია.') : setShowReleaseSubmission(true)} className="text-[10px] font-semibold text-teal-200 hover:text-white">რელიზის დამატება</button></div>}
                 {showUserMenu && (
                   <>
                     <div className="fixed inset-0 z-10" onClick={() => setShowUserMenu(false)} />
-                    <div className="absolute right-0 top-full mt-2 z-20 w-48 rounded-lg border border-[#2a2a32] bg-[#121215] py-1 shadow-xl">
-                      <div className="px-3 py-2 border-b border-[#1e1e24]">
+                    <div role="menu" className="absolute right-0 top-full z-20 mt-2 w-64 rounded-xl border border-[#2a2a32] bg-[#121215] p-1.5 shadow-xl shadow-black/40">
+                      <div className="border-b border-[#1e1e24] px-3 py-3">
                         <p className="text-sm font-bold text-white truncate">{user.displayName}</p>
                         <RoleBadge role={user.role} category={user.authorCategory} isVerified={user.isVerified} size="profile" className="mt-1" />
-                        <p className="text-[11px] text-gray-500">
+                        <p className="mt-1 text-sm leading-5 text-gray-400">
                           {user.role === 'media' ? 'მედია' : user.role === 'admin' ? 'ადმინი' : user.role === 'author' || user.role === 'artist' ? 'ავტორი' : 'მომხმარებელი'}
                         </p>
-                        <p className="mt-2 text-[11px] text-gray-400">რეცენზიები: <span className="font-bold text-white">{reviewCount}</span></p>
+                        <p className="mt-2 text-sm leading-5 text-gray-400">რეცენზიები: <span className="font-bold text-white">{reviewCount}</span></p>
                       </div>
-                      {user.role === 'admin' && <button onClick={() => { onAdminOpen(); setShowUserMenu(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-amber-300 shadow-[0_0_18px_-8px_rgba(251,191,36,0.9)] hover:bg-amber-400/10"><Shield className="h-4 w-4" />ადმინ პანელი</button>}
-                      {(user.role === 'media' || user.role === 'admin') && <button onClick={() => { if (user.role === 'media' && user.mediaMonthlyReleases >= 5) { window.alert('ამ თვეში რელიზების ლიმიტი ამოწურულია.'); return; } setShowReleaseSubmission(true); setShowUserMenu(false); }} className="flex w-full items-center gap-2 px-3 py-2 text-sm font-semibold text-teal-300 hover:bg-teal-400/10">რელიზის დამატება</button>}
+                      {(user.role === 'media' || user.role === 'admin') && <div className="px-3 py-2 text-sm leading-5 text-teal-300">{user.role === 'media' ? `ამ თვეში დარჩენილია: ${Math.max(0, 5 - user.mediaMonthlyReleases)}` : 'რელიზების შეუზღუდავი მართვა'}</div>}
+                      {user.role === 'admin' && <button role="menuitem" onClick={() => { onAdminOpen(); setShowUserMenu(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-amber-300 shadow-[0_0_18px_-8px_rgba(251,191,36,0.9)] hover:bg-amber-400/10"><Shield className="h-4 w-4" />ადმინ პანელი</button>}
+                      {(user.role === 'media' || user.role === 'admin') && <button role="menuitem" onClick={() => { if (user.role === 'media' && user.mediaMonthlyReleases >= 5) { window.alert('ამ თვეში რელიზების ლიმიტი ამოწურულია.'); return; } setShowReleaseSubmission(true); setShowUserMenu(false); }} className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-semibold text-teal-300 hover:bg-teal-400/10">რელიზის დამატება</button>}
                       <button
                         onClick={() => { logout(); setShowUserMenu(false); }}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-sm text-gray-400 transition-colors hover:bg-[#1e1e24] hover:text-rose-400"
+                        role="menuitem"
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-sm text-gray-400 transition-colors hover:bg-[#1e1e24] hover:text-rose-400"
                       >
                         <LogOut className="h-4 w-4" />
                         გასვლა
@@ -171,7 +160,7 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
           </div>
         </div>
       </nav>
-    </header>{showReleaseSubmission && <MediaReleaseModal onClose={() => setShowReleaseSubmission(false)} onSubmitted={refreshProfile} />}
+    </header>{showReleaseSubmission && <Suspense fallback={<SectionLoader onClose={() => setShowReleaseSubmission(false)} />}><MediaReleaseModal onClose={() => setShowReleaseSubmission(false)} onSubmitted={refreshProfile} /></Suspense>}
     </>
   );
 }

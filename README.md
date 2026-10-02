@@ -1,4 +1,0 @@
-# 12222
-
-[![Open in Bolt](https://bolt.new/static/open-in-bolt.svg)](https://bolt.new/~/sb1-cgvzmqla)
-123123123123

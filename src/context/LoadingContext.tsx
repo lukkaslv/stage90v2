@@ -9,35 +9,25 @@ interface LoadingContextValue {
 export const LoadingContext = createContext<LoadingContextValue | undefined>(undefined);
 
 export function LoadingProvider({ children }: { children: ReactNode }) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [pendingTransitions, setPendingTransitions] = useState(0);
+  const isLoading = pendingTransitions > 0;
   const startTransition = useCallback(async (asyncCallback?: () => Promise<unknown> | void) => {
-    // Raise the barrier before invoking navigation. The following two paint
-    // frames ensure the overlay is visible before React renders the destination.
-    setIsLoading(true);
+    const pending = asyncCallback?.();
+    if (!pending) return;
 
-    await new Promise<void>((resolve) => {
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => resolve());
-      });
-    });
-
-    // Run navigation and the cinematic loader beat concurrently. This keeps
-    // the transition visible for a crisp 700ms without adding another delay
-    // after the destination has finished rendering.
-    const minDelay = new Promise<void>((resolve) => {
-      window.setTimeout(resolve, 700);
-    });
-
+    setPendingTransitions((count) => count + 1);
     try {
-      await Promise.all([asyncCallback?.(), minDelay]);
+      await pending;
     } finally {
-      setIsLoading(false);
+      setPendingTransitions((count) => count - 1);
     }
   }, []);
 
   useEffect(() => {
-    document.body.style.overflow = isLoading ? 'hidden' : '';
-    return () => { document.body.style.overflow = ''; };
+    if (!isLoading) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
   }, [isLoading]);
 
   const value = useMemo(() => ({ isLoading, startTransition }), [isLoading, startTransition]);

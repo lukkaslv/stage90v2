@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef, type MouseEvent } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ChevronRight,
   Play,
@@ -36,8 +37,10 @@ import { STRICT_VALUE_TIER_CONFIG, valueTierFromScore } from '@/lib/valueTier';
 interface ReleaseDetailProps {
   release: Release | string | null;
   onBack: () => void;
+  onOpenRelease: (release: Release) => void;
+  backToRelease?: boolean;
   onOpenAuth: () => void;
-  onReviewSubmitted?: () => void;
+  onReviewSubmitted?: (releaseId: string | number, created: boolean) => void;
 }
 
 type FormTab = (typeof REVIEW_FORM_TABS)[number]['id'];
@@ -58,9 +61,12 @@ function isAlbumOrEp(releaseType?: string): boolean {
 function youtubeEmbedUrl(value?: string): string | null {
   if (!value) return null;
   try {
-    const url = new URL(value);
+    const url = new URL(/^https?:\/\//i.test(value.trim()) ? value.trim() : `https://${value.trim()}`);
     const host = url.hostname.replace(/^www\./, '').toLowerCase();
-    const id = host === 'youtu.be' ? url.pathname.split('/').filter(Boolean)[0] : host === 'youtube.com' || host === 'm.youtube.com' ? (url.searchParams.get('v') ?? url.pathname.split('/').filter(Boolean)[1]) : null;
+    const path = url.pathname.split('/').filter(Boolean);
+    const id = host === 'youtu.be' ? path[0] : ['youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube-nocookie.com'].includes(host)
+      ? url.searchParams.get('v') ?? (['shorts', 'embed', 'live', 'v'].includes(path[0]) ? path[1] : null)
+      : null;
     return id ? `https://www.youtube.com/embed/${id}?autoplay=1` : null;
   } catch { return null; }
 }
@@ -116,7 +122,7 @@ function fallbackRelease(candidate: Release | string | null): Release | null {
   return candidate && typeof candidate !== 'string' ? candidate : null;
 }
 
-export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSubmitted }: ReleaseDetailProps) {
+export default function ReleaseDetail({ release, onBack, onOpenRelease, backToRelease = false, onOpenAuth, onReviewSubmitted }: ReleaseDetailProps) {
   const { isAuthenticated, user } = useAuth();
   const [params, setParams] = useState<number[]>([5, 5, 5, 5]);
   const [vibeLevel, setVibeLevel] = useState(3);
@@ -434,7 +440,7 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
     await loadReviews();
     const { data: refreshedRelease } = await supabase.from('releases').select('*').eq('id', activeRelease.id).maybeSingle();
     if (refreshedRelease) setLoadedRelease(normalizeRelease(refreshedRelease as Record<string, unknown>));
-    onReviewSubmitted?.();
+    onReviewSubmitted?.(activeRelease.id, !existingReview);
   };
 
   useEffect(() => {
@@ -463,7 +469,7 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
     : activeRelease.trackCount;
   const handleListen = (event: MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
-    const embedUrl = youtubeEmbedUrl(activeRelease.youtube_url);
+    const embedUrl = youtubeEmbedUrl(activeRelease.youtube_url) ?? youtubeEmbedUrl(activeRelease.streaming_url) ?? youtubeEmbedUrl(activeRelease.audio_url);
     if (embedUrl) {
       setYoutubePlayerUrl(embedUrl);
       setAudioUrl(null);
@@ -479,7 +485,7 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
     window.setTimeout(() => setAudioMessage(''), 3200);
   };
   const playTrack = (track: Release) => {
-    const embedUrl = youtubeEmbedUrl(track.youtube_url);
+    const embedUrl = youtubeEmbedUrl(track.youtube_url) ?? youtubeEmbedUrl(track.streaming_url) ?? youtubeEmbedUrl(track.audio_url);
     if (embedUrl) {
       setYoutubePlayerUrl(embedUrl);
       setAudioUrl(null);
@@ -501,9 +507,9 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
 
   return (
     <div className="relative min-h-screen bg-[#0a0a0c] animate-slide-in">
-      {audioMessage && <div role="status" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg border border-cyan-400/30 bg-[#121215] px-4 py-3 text-sm font-semibold text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.2)]">{audioMessage}</div>}
-      {youtubePlayerUrl && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true"><div className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-cyan-400/30 bg-[#121215] shadow-2xl"><button type="button" onClick={(event) => { event.stopPropagation(); setYoutubePlayerUrl(null); }} className="absolute right-3 top-2 z-10 rounded-full bg-black/70 px-3 py-1 text-xl text-white" aria-label="დახურვა">×</button><div className="aspect-video"><iframe src={youtubePlayerUrl} title={activeRelease.title} className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div></div></div>}
-      {audioUrl && <div className="fixed bottom-5 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-cyan-400/30 bg-[#121215] p-3 shadow-2xl"><audio ref={audioRef} src={audioUrl} controls autoPlay className="h-8" /><button type="button" onClick={(event) => { event.stopPropagation(); setAudioUrl(null); }} className="text-lg text-gray-400 hover:text-white" aria-label="დახურვა">×</button></div>}
+      {audioMessage && createPortal(<div role="status" className="fixed bottom-5 left-1/2 z-[90] -translate-x-1/2 rounded-lg border border-cyan-400/30 bg-[#121215] px-4 py-3 text-sm font-semibold text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.2)]">{audioMessage}</div>, document.body)}
+      {youtubePlayerUrl && createPortal(<div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true"><div className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-cyan-400/30 bg-[#121215] shadow-2xl"><button type="button" onClick={(event) => { event.stopPropagation(); setYoutubePlayerUrl(null); }} className="absolute right-3 top-2 z-10 rounded-full bg-black/70 px-3 py-1 text-xl text-white" aria-label="დახურვა">×</button><div className="aspect-video"><iframe src={youtubePlayerUrl} title={activeRelease.title} className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div></div></div>, document.body)}
+      {audioUrl && createPortal(<div className="fixed bottom-5 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-cyan-400/30 bg-[#121215] p-3 shadow-2xl"><audio ref={audioRef} src={audioUrl} controls autoPlay className="h-8" /><button type="button" onClick={(event) => { event.stopPropagation(); setAudioUrl(null); }} className="text-lg text-gray-400 hover:text-white" aria-label="დახურვა">×</button></div>, document.body)}
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Breadcrumbs */}
         <nav className="mb-6 flex items-center gap-2 text-sm">
@@ -511,7 +517,7 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
             onClick={onBack}
             className="text-gray-500 transition-colors hover:text-cyan-400"
           >
-            მთავარი
+            {backToRelease ? 'ალბომში დაბრუნება' : 'მთავარი'}
           </button>
           <ChevronRight className="h-3.5 w-3.5 text-gray-700" />
           <span className="text-gray-500">რელიზები</span>
@@ -605,7 +611,7 @@ export default function ReleaseDetail({ release, onBack, onOpenAuth, onReviewSub
 
         {isAlbumOrEp(activeRelease.release_type ?? activeRelease.type) && <section className="mb-8 rounded-2xl border border-cyan-400/20 bg-[#121215] p-5" aria-labelledby="tracklist-heading">
           <h2 id="tracklist-heading" className="mb-4 text-lg font-bold text-white">ტრეკების სია</h2>
-          {childTracks.length === 0 ? <p className="text-sm text-gray-500">ამ ალბომში ტრეკები ჯერ არ არის.</p> : <ol className="divide-y divide-white/10">{childTracks.map((track, index) => <li key={String(track.id)} className="flex items-center gap-4 py-3"><span className="w-7 text-center text-sm font-bold text-cyan-300">{index + 1}</span><div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-white">{track.title}</p><p className="truncate text-xs text-gray-500">{track.artist}</p></div><button type="button" onClick={() => playTrack(track)} aria-label={`${track.title} — მოსმენა`} className="rounded-full border border-cyan-300/30 p-2 text-cyan-200 transition hover:bg-cyan-300/10"><Play className="h-4 w-4" fill="currentColor" /></button></li>)}</ol>}
+          {childTracks.length === 0 ? <p className="text-sm text-gray-500">ამ ალბომში ტრეკები ჯერ არ არის.</p> : <ol className="divide-y divide-white/10">{childTracks.map((track, index) => <li key={String(track.id)} className="flex items-center gap-4 py-3"><span className="w-7 text-center text-sm font-bold text-cyan-300">{index + 1}</span><div className="min-w-0 flex-1"><button type="button" onClick={() => onOpenRelease(track)} className="block max-w-full truncate text-left text-sm font-semibold text-white transition-colors hover:text-cyan-300 focus-visible:text-cyan-300">{track.title}</button><p className="truncate text-xs text-gray-500">{track.artist}</p></div><button type="button" onClick={() => playTrack(track)} aria-label={`${track.title} — მოსმენა`} className="rounded-full border border-cyan-300/30 p-2 text-cyan-200 transition hover:bg-cyan-300/10"><Play className="h-4 w-4" fill="currentColor" /></button></li>)}</ol>}
         </section>}
 
         {/* Divider */}
