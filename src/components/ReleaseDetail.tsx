@@ -38,6 +38,7 @@ interface ReleaseDetailProps {
   release: Release | string | null;
   onBack: () => void;
   onOpenRelease: (release: Release) => void;
+  onOpenReview: (id: string) => void;
   backToRelease?: boolean;
   onOpenAuth: () => void;
   onReviewSubmitted?: (releaseId: string | number, created: boolean) => void;
@@ -122,7 +123,7 @@ function fallbackRelease(candidate: Release | string | null): Release | null {
   return candidate && typeof candidate !== 'string' ? candidate : null;
 }
 
-export default function ReleaseDetail({ release, onBack, onOpenRelease, backToRelease = false, onOpenAuth, onReviewSubmitted }: ReleaseDetailProps) {
+export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenReview, backToRelease = false, onOpenAuth, onReviewSubmitted }: ReleaseDetailProps) {
   const { isAuthenticated, user } = useAuth();
   const [params, setParams] = useState<number[]>([5, 5, 5, 5]);
   const [vibeLevel, setVibeLevel] = useState(3);
@@ -954,6 +955,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, backToRe
                       </div>
                       <p className="mt-1 break-words break-all overflow-hidden text-xs font-semibold text-gray-300 line-clamp-1">{review.title}</p>
                       <p className="mt-1 break-words break-all overflow-hidden whitespace-pre-wrap text-xs leading-relaxed text-gray-500 line-clamp-2">{review.body}</p>
+                      <button type="button" onClick={() => onOpenReview(String(review.id))} className="mt-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">სრული რეცენზიის ნახვა →</button>
                       {(user?.role === 'author' || user?.role === 'artist' || user?.role === 'admin') && <button onClick={() => void toggleAuthorLike(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${authorLikedReviewIds.has(String(review.id)) ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-200' : 'border-[#2a2a32] text-gray-400 hover:text-cyan-200'}`}>ავტორული მოწონება · {review.authorLikes + (authorLikedReviewIds.has(String(review.id)) ? 1 : 0)}</button>}
                       <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-600">
                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{review.createdAt ? new Date(review.createdAt).toLocaleDateString('ka-GE') : 'ახლახან'}</span>

@@ -14,6 +14,7 @@ import SectionLoader from '@/components/SectionLoader';
 import SectionPage from '@/components/SectionPage';
 import { sectionPaths, type SectionId } from '@/lib/sectionRoutes';
 import ReviewDetail from '@/components/ReviewDetail';
+import TopReleasesPage from '@/components/TopReleasesPage';
 import { useReleaseCatalog } from '@/hooks/useReleaseCatalog';
 import type { Release, PageId } from '@/types/music';
 import { supabase } from '@/lib/supabase';
@@ -181,6 +182,7 @@ function AppContent() {
             release={selectedRelease}
             onBack={returnFromRelease}
             onOpenRelease={openTrackRelease}
+            onOpenReview={openReview}
             backToRelease={releaseHistory.length > 0}
             onOpenAuth={() => setAuthMode('login')}
             onReviewSubmitted={onReviewSubmitted}
@@ -195,7 +197,9 @@ function AppContent() {
   if (selectedReview) {
     return <div className="min-h-screen bg-[#0a0a0c]">
       <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} />
+      {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
       <ReviewDetail id={selectedReview} onReleaseClick={openRelease} onBack={returnFromRelease} />
+      {authMode && <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>}
     </div>;
   }
 
@@ -206,7 +210,11 @@ function AppContent() {
       {adminMode && user?.role === 'admin' ? <Suspense fallback={<SectionLoader />}><AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /></Suspense> : null}
 
       {!adminMode && maintenanceMap[activeTab]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[activeTab].tab_title} customMessage={maintenanceMap[activeTab].message_geo} />}
-      {!adminMode && section && !maintenanceMap.releases?.is_maintenance && <SectionPage key={section} section={section} onReleaseClick={openRelease} onReviewClick={openReview} />}
+      {!adminMode && section && !maintenanceMap.releases?.is_maintenance && (section === 'top-releases'
+        ? <TopReleasesPage onReleaseClick={openRelease} />
+        : section === 'daily-top-15'
+          ? <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><Top15Daily onReleaseClick={openRelease} /></main>
+          : <SectionPage key={section} section={section} onReleaseClick={openRelease} onReviewClick={openReview} />)}
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'top90' && <Suspense fallback={<SectionLoader />}><Top90Leaderboard /></Suspense>}
 
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'achievements' && <Suspense fallback={<SectionLoader />}><Achievements /></Suspense>}
@@ -277,17 +285,26 @@ function AppContent() {
 
           {/* Main content */}
           <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
-            <Top15Daily onReleaseClick={openRelease} />
+            <div className="space-y-2">
+              <button type="button" onClick={() => openSection('daily-top-15')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <Top15Daily onReleaseClick={openRelease} preview />
+            </div>
 
-            <button type="button" onClick={() => openSection('author-picks')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
-            <AuthorsPicks releaseById={releaseById} onReleaseClick={openRelease} preview />
+            <div className="space-y-2">
+              <button type="button" onClick={() => openSection('author-picks')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <AuthorsPicks releaseById={releaseById} onReleaseClick={openRelease} preview />
+            </div>
 
-            <button type="button" onClick={() => openSection('author-comments')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
-            <AuthorComments refreshVersion={refreshKey + reviewVersion + commentVersion} releaseById={releaseById} onReleaseClick={openRelease} preview />
+            <div className="space-y-2">
+              <button type="button" onClick={() => openSection('author-comments')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <AuthorComments refreshVersion={refreshKey + reviewVersion + commentVersion} releaseById={releaseById} onReleaseClick={openRelease} preview />
+            </div>
 
             {/* Section 1: Top daily releases */}
-            <button type="button" onClick={() => handleTabChange('top90')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
-            <TopCarousel releases={topCatalog} onReleaseClick={openRelease} userReviewsMap={userReviewsMap} />
+            <div className="space-y-2">
+              <button type="button" onClick={() => openSection('top-releases')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <TopCarousel releases={topCatalog} onReleaseClick={openRelease} userReviewsMap={userReviewsMap} />
+            </div>
 
             {/* Section 2: Latest releases */}
             <section className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
@@ -313,11 +330,15 @@ function AppContent() {
               </div>
             </section>
 
-            <button type="button" onClick={() => openSection('media-reviews')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
-            <MediaReviews refreshVersion={refreshKey + reviewVersion} releaseById={releaseById} onReviewClick={openReview} />
+            <div className="space-y-2">
+              <button type="button" onClick={() => openSection('media-reviews')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <MediaReviews refreshVersion={refreshKey + reviewVersion} releaseById={releaseById} onReviewClick={openReview} />
+            </div>
 
-            <button type="button" onClick={() => openSection('reviews')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
-            <RecentReviewsFeed releaseById={releaseById} releases={releaseCatalog} onReleaseClick={openRelease} onReviewClick={openReview} />
+            <div className="space-y-2">
+              <button type="button" onClick={() => openSection('reviews')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <RecentReviewsFeed releaseById={releaseById} releases={releaseCatalog} onReleaseClick={openRelease} onReviewClick={openReview} />
+            </div>
 
             <NewNamesSection releases={newNames} onReleaseClick={openRelease} onViewAll={() => openSection('new-names')} />
           </main>

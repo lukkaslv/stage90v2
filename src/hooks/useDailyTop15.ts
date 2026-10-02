@@ -33,18 +33,22 @@ export function useDailyTop15() {
         });
         if (data.length < 500) break;
       }
-      const ids = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .slice(0, 15).map(([id]) => id);
-      if (!ids.length) { setTop([]); return; }
-      const { data, error } = await queryCatalog((columns) => client.from('releases')
-        .select(columns).in('id', ids).eq('is_active', true).limit(15)
-        .returns<Record<string, unknown>[]>());
-      if (cancelled || current !== request || error || !data) return;
-      const byId = new Map(data.map((row) => [String(row.id), normalizeCatalogRelease(row)]));
-      setTop(ids.flatMap((id) => {
-        const release = byId.get(id);
-        return release ? [{ release, dailyCount: counts.get(id) ?? 0 }] : [];
-      }));
+      const rankedIds = [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([id]) => id);
+      const next: DailyTopRelease[] = [];
+      for (let from = 0; from < rankedIds.length && next.length < 15; from += 100) {
+        const candidates = rankedIds.slice(from, from + 100);
+        const { data, error } = await queryCatalog((columns) => client.from('releases')
+          .select(columns).in('id', candidates).eq('is_active', true).limit(100)
+          .returns<Record<string, unknown>[]>());
+        if (cancelled || current !== request || error || !data) return;
+        const byId = new Map(data.map((row) => [String(row.id), normalizeCatalogRelease(row)]));
+        candidates.forEach((id) => {
+          const release = byId.get(id);
+          if (release && next.length < 15) next.push({ release, dailyCount: counts.get(id) ?? 0 });
+        });
+      }
+      setTop(next);
     };
 
     void load();

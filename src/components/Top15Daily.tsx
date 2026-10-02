@@ -3,6 +3,7 @@ import { useDailyTop15 } from '@/hooks/useDailyTop15';
 
 interface Top15DailyProps {
   onReleaseClick: (release: Release) => void;
+  preview?: boolean;
 }
 
 const rankBadgeClasses = [
@@ -28,7 +29,7 @@ function tierFromScore(score: number) {
   return 'ვერცხლი';
 }
 
-export default function Top15Daily({ onReleaseClick }: Top15DailyProps) {
+export default function Top15Daily({ onReleaseClick, preview = false }: Top15DailyProps) {
   const sortedTopReleases = useDailyTop15();
 
   return <section className="animate-fade-in" aria-labelledby="top-15-heading">
@@ -37,7 +38,7 @@ export default function Top15Daily({ onReleaseClick }: Top15DailyProps) {
       <h2 id="top-15-heading" className="text-xl font-black text-white tracking-wide">ბოლო 24 საათის ტოპ-15</h2>
     </div>
     {sortedTopReleases.length === 0 ? <div className="flex min-h-20 items-center justify-center rounded-xl border border-dashed border-[#2a2a32] bg-[#121215] px-4 py-5 text-center text-xs text-gray-500">დღის აქტიური რელიზები ჯერ არ არის.</div> : <div onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="no-scrollbar scrollbar-none -mx-4 flex gap-5 overflow-x-auto overflow-y-visible scroll-smooth select-none px-1 pt-3 pb-2 sm:gap-6">
-      {sortedTopReleases.map(({ release, dailyCount }, index) => {
+      {sortedTopReleases.slice(0, preview ? 6 : 15).map(({ release, dailyCount }, index) => {
         const tier = release.value_tier || tierFromScore(Number(release.community_score ?? 0));
         return <button key={String(release.id)} type="button" onClick={() => onReleaseClick(release)} className="group w-[84px] shrink-0 text-center" aria-label={`${release.title} — ${release.artist}`}>
           <div className="relative mx-auto h-16 w-16">
