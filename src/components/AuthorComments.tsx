@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSupabasePages } from '@/hooks/useSupabasePages';
 import LoadMoreButton from '@/components/LoadMoreButton';
 import { ExternalLink, Heart, MessageCircle } from 'lucide-react';
@@ -34,22 +34,9 @@ async function loadCommentRelations(rows: Record<string, unknown>[]) {
 }
 
 export default function AuthorComments({ releaseById, onReleaseClick, refreshVersion = 0, preview = false }: AuthorCommentsProps) {
-  const source = useRef<'comments' | 'reviews'>('comments');
-  const sourceVersion = useRef(0);
   const fetchPage = useCallback(async (from: number, to: number) => {
     if (!supabase) return { data: null, error: true };
-    if (from === 0) { source.current = 'comments'; sourceVersion.current += 1; }
-    const version = sourceVersion.current;
-    if (source.current === 'comments') {
-      const client = supabase;
-      const result = await client.from('author_comments').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to).returns<Record<string, unknown>[]>();
-      if (version !== sourceVersion.current || from > 0) return result.error ? result : loadCommentRelations(result.data ?? []);
-      if (result.data?.length) return loadCommentRelations(result.data);
-      const schemaUnavailable = result.error && ['42P01', '42703', 'PGRST200', 'PGRST204', 'PGRST205'].includes(result.error.code);
-      if (result.error && !schemaUnavailable) return result;
-      source.current = 'reviews';
-    }
-    const result = await supabase.from('reviews').select('id, release_id, user_id, content, created_at, profiles:user_id!inner(display_name, role, author_category, is_verified)').or('role.eq.author,role.eq.media,display_name.eq.storm', { referencedTable: 'profiles' }).order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to);
+    const result = await supabase.from('author_comments').select('*').order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to).returns<Record<string, unknown>[]>();
     return result.error ? result : loadCommentRelations(result.data ?? []);
   }, []);
   const { rows, loading, hasMore, error, loadMore } = useSupabasePages(fetchPage, 6, refreshVersion);
