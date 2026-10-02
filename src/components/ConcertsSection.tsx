@@ -23,7 +23,7 @@ export default function ConcertsSection() {
         return {
           id: typeof item.id === 'number' ? item.id : String(item.id ?? index),
           artist: String(item.artist ?? item.artist_name ?? item.name ?? ''),
-          tour: String(item.title ?? ''),
+          tour: String(item.tour_name ?? item.title ?? ''),
           date: formatDate(item.event_date ?? item.date ?? item.start_date),
           city: String(item.city ?? item.location ?? ''),
           type: String(item.category ?? item.type ?? item.event_type ?? ''),
