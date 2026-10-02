@@ -82,7 +82,7 @@ export default function AdminDashboard({ onBack, onRefresh, onReleaseCreated, ma
   };
   const addConcert = async () => {
     if (!supabase || !concert.title.trim() || !concert.artist.trim() || !concert.city.trim() || !concert.date) return;
-    const { data, error } = await supabase.from('concerts').insert({ tour_name: concert.title.trim(), artist_name: concert.artist.trim(), city: concert.city.trim(), event_date: concert.date, cover_url: concert.coverUrl.trim() || null, event_type: 'concert' }).select('*').single();
+    const { data, error } = await supabase.from('concerts').insert({ tour_name: concert.title.trim(), artist_name: concert.artist.trim(), city: concert.city.trim(), event_date: concert.date, cover_url: concert.coverUrl.trim() || null, event_type: 'კონცერტი' }).select('*').single();
     if (error) { console.error('Failed to add concert:', error); window.alert('კონცერტის დამატება ვერ მოხერხდა. გადაამოწმეთ მონაცემები და სცადეთ ხელახლა.'); return; }
     if (data) setConcerts((items) => [...items, data as Row]);
     setConcert({ title: '', artist: '', city: '', date: '', coverUrl: '' });
