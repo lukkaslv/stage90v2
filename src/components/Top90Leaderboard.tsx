@@ -41,9 +41,9 @@ const initialPlatformStats = [
 ];
 
 const badgeStyles: Record<string, { ring: string; glow: string; label: string }> = {
-  ruby: { ring: 'ring-rose-500/40', glow: 'shadow-[0_0_24px_-4px_rgba(244,63,94,0.5)]', label: 'ლალი' },
-  emerald: { ring: 'ring-emerald-500/40', glow: 'shadow-[0_0_24px_-4px_rgba(16,185,129,0.5)]', label: 'ზურმუხტი' },
-  gold: { ring: 'ring-amber-500/40', glow: 'shadow-[0_0_24px_-4px_rgba(251,191,36,0.5)]', label: 'ოქრო' },
+  ruby: { ring: 'ring-rose-700/70', glow: '', label: 'ლალი' },
+  emerald: { ring: 'ring-emerald-700/70', glow: '', label: 'ზურმუხტი' },
+  gold: { ring: 'ring-amber-700/70', glow: '', label: 'ოქრო' },
 };
 
 function PodiumCard({ user, position }: { user: LeaderboardUser; position: 'center' | 'left' | 'right' }) {
@@ -192,8 +192,8 @@ export default function Top90Leaderboard() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-cyan-400/10">
-            <Trophy className="h-5 w-5 text-cyan-400" />
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-400/10">
+            <Trophy className="h-5 w-5 text-blue-400" />
           </span>
           <h1 className="text-2xl font-bold text-white sm:text-3xl">ტოპ-90 საზოგადოების ქულებით</h1>
         </div>
@@ -248,7 +248,7 @@ export default function Top90Leaderboard() {
                     <span className="flex-1 min-w-0 truncate text-sm font-medium text-gray-200">{user.username}</span>
 
                     {/* Score pill */}
-                    <span className="shrink-0 rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-sm font-bold text-cyan-300">
+                    <span className="shrink-0 rounded-lg border border-blue-400/20 bg-blue-400/10 px-3 py-1 text-sm font-bold text-blue-300">
                       {user.points}
                     </span>
 
@@ -269,8 +269,8 @@ export default function Top90Leaderboard() {
           <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-5 lg:sticky lg:top-32">
             <div className="mb-4 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-400/10">
-                  <Trophy className="h-4 w-4 text-violet-400" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-pink-400/10">
+                  <Trophy className="h-4 w-4 text-pink-400" />
                 </span>
                 <h3 className="text-sm font-bold text-white">პლატფორმის სტატისტიკა</h3>
               </div>

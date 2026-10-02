@@ -8,7 +8,7 @@ interface AlbumCreateFormProps {
   onCreated: () => void;
 }
 
-const inputClass = 'mt-1 w-full rounded-lg border border-[#2a2a32] bg-[#0b0b0e] px-3 py-2.5 text-sm text-white outline-none focus:border-cyan-400/60';
+const inputClass = 'mt-1 w-full rounded-lg border border-[#2a2a32] bg-[#0b0b0e] px-3 py-2.5 text-sm text-white outline-none focus:border-blue-400/60';
 const isBundle = (value: unknown) => ['ალბომი', 'album', 'ep'].includes(String(value ?? '').trim().toLowerCase());
 
 export default function AlbumCreateForm({ releases, onCreated }: AlbumCreateFormProps) {
@@ -87,7 +87,7 @@ export default function AlbumCreateForm({ releases, onCreated }: AlbumCreateForm
     }
   };
 
-  return <form onSubmit={(event) => void submit(event)} className="rounded-xl border border-cyan-400/25 bg-[#121215] p-5">
+  return <form onSubmit={(event) => void submit(event)} className="rounded-xl border border-blue-400/25 bg-[#121215] p-5">
     <h2 className="text-lg font-bold text-white">რელიზების ალბომად გაერთიანება</h2>
     <p className="mt-1 text-sm text-gray-400">აირჩიეთ არსებული ტრეკები, მიუთითეთ ალბომის სახელი და გარეკანი.</p>
     <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -98,19 +98,19 @@ export default function AlbumCreateForm({ releases, onCreated }: AlbumCreateForm
       <label className="text-xs text-gray-400">სეზონი *<input required value={season} onChange={(event) => setSeason(event.target.value)} className={inputClass} /></label>
     </div>
     {coverUrl.trim() && <img src={coverUrl.trim()} alt="ალბომის გარეკანი" className="mt-4 h-32 w-32 rounded-lg border border-white/10 object-cover" />}
-    <h3 className="mt-5 text-sm font-bold text-cyan-200">ტრეკები და მათი რიგი</h3>
+    <h3 className="mt-5 text-sm font-bold text-blue-200">ტრეკები და მათი რიგი</h3>
     <div className="mt-2 max-h-72 space-y-2 overflow-y-auto">
       {tracks.length === 0 && <p className="text-sm text-gray-500">დამოუკიდებელი ტრეკები ვერ მოიძებნა.</p>}
       {orderedTracks.map((track) => {
         const id = String(track.id);
         const position = selectedIds.indexOf(id);
         return <div key={id} className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2">
-          <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"><input type="checkbox" checked={position >= 0} onChange={() => toggleTrack(id)} className="accent-cyan-400" />{typeof track.cover_url === 'string' && <img src={track.cover_url} alt="" className="h-9 w-9 rounded object-cover" />}<span className="min-w-0 truncate text-sm text-gray-200">{String(track.title ?? '')}<span className="ml-2 text-xs text-gray-500">{String(track.artist_name ?? '')}</span></span></label>
-          {position >= 0 && <><span className="text-xs font-bold text-cyan-300">#{position + 1}</span><button type="button" disabled={position === 0} onClick={() => moveTrack(id, -1)} aria-label="ტრეკის ზემოთ გადატანა" className="text-cyan-300 disabled:opacity-30">▲</button><button type="button" disabled={position === selectedIds.length - 1} onClick={() => moveTrack(id, 1)} aria-label="ტრეკის ქვემოთ გადატანა" className="text-cyan-300 disabled:opacity-30">▼</button></>}
+          <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3"><input type="checkbox" checked={position >= 0} onChange={() => toggleTrack(id)} className="accent-blue-400" />{typeof track.cover_url === 'string' && <img src={track.cover_url} alt="" className="h-9 w-9 rounded object-cover" />}<span className="min-w-0 truncate text-sm text-gray-200">{String(track.title ?? '')}<span className="ml-2 text-xs text-gray-500">{String(track.artist_name ?? '')}</span></span></label>
+          {position >= 0 && <><span className="text-xs font-bold text-blue-300">#{position + 1}</span><button type="button" disabled={position === 0} onClick={() => moveTrack(id, -1)} aria-label="ტრეკის ზემოთ გადატანა" className="text-blue-300 disabled:opacity-30">▲</button><button type="button" disabled={position === selectedIds.length - 1} onClick={() => moveTrack(id, 1)} aria-label="ტრეკის ქვემოთ გადატანა" className="text-blue-300 disabled:opacity-30">▼</button></>}
         </div>;
       })}
     </div>
     {message && <p role={message.error ? 'alert' : 'status'} className={`mt-3 text-sm ${message.error ? 'text-rose-300' : 'text-emerald-300'}`}>{message.text}</p>}
-    <button type="submit" disabled={saving || tracks.length < 2} className="mt-4 rounded-lg bg-cyan-400 px-4 py-2.5 text-sm font-bold text-black disabled:opacity-40">{saving ? 'იქმნება…' : 'ალბომის შექმნა'}</button>
+    <button type="submit" disabled={saving || tracks.length < 2} className="mt-4 rounded-lg bg-blue-400 px-4 py-2.5 text-sm font-bold text-black disabled:opacity-40">{saving ? 'იქმნება…' : 'ალბომის შექმნა'}</button>
   </form>;
 }

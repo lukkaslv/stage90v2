@@ -9,7 +9,7 @@ export default function SectionLoader({ onClose }: { onClose?: () => void }) {
         <X className="h-5 w-5" />
       </button>}
       <div role="status" aria-live="polite" className="flex items-center gap-3 text-sm text-gray-400">
-        <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none text-cyan-400" />
+        <LoaderCircle aria-hidden="true" className="h-5 w-5 animate-spin motion-reduce:animate-none text-blue-400" />
         <span>იტვირთება…</span>
       </div>
     </div>

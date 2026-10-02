@@ -150,7 +150,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
   };
 
   const inputClass =
-    'w-full rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 transition-colors focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30';
+    'w-full rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 transition-colors focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30';
 
   return (
     <div
@@ -163,11 +163,15 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
       {/* Modal */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-[#2a2a32] bg-[#121215] shadow-2xl animate-fade-in"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="stage-auth-heading"
+        className="stage-modal relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-[#2a2a32] bg-[#121215] shadow-2xl animate-fade-in"
       >
         {/* Close button */}
         <button
           onClick={onClose}
+          aria-label="დახურვა"
           className="absolute right-4 top-4 z-20 flex h-8 w-8 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-[#1e1e24] hover:text-gray-300"
         >
           <X className="h-5 w-5" />
@@ -176,23 +180,23 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
         <div className="p-6 sm:p-8">
           {/* Header */}
           <div className="mb-6 text-center">
-            <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-violet-500 glow-cyan">
-              <Music className="h-6 w-6 text-black" />
+            <div className="mb-3 inline-flex h-12 w-12 items-center justify-center overflow-hidden rounded-md border border-[#4d5060]">
+              <img src="/stage90-mark.svg" alt="" className="h-full w-full" />
             </div>
-            <h2 className="text-xl font-bold text-white">
+            <h2 id="stage-auth-heading" className="text-xl font-bold text-white">
               {mode === 'login' ? 'ავტორიზაცია' : mode === 'invite' ? 'პაროლის შექმნა' : 'რეგისტრაციის განაცხადი'}
             </h2>
             <p className="mt-1 text-xs text-gray-500">
-              რზტ — რისა ზა თვორჩესტვო
+              ქართული მუსიკის სცენა
             </p>
           </div>
 
           {/* Mode switch */}
-          {mode !== 'invite' && <div className="mb-6 flex gap-1 rounded-xl border border-[#1e1e24] bg-[#0a0a0c] p-1">
+          {mode !== 'invite' && <div className="stage-auth-tabs mb-6 flex gap-1 rounded-xl border border-[#1e1e24] bg-[#0a0a0c] p-1">
             <button
               onClick={() => { setMode('login'); setError(''); }}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                mode === 'login' ? 'bg-cyan-400/10 text-cyan-400' : 'text-gray-500 hover:text-gray-300'
+                mode === 'login' ? 'bg-blue-400/10 text-blue-400' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               შესვლა
@@ -200,7 +204,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
             <button
               onClick={() => { setMode('register'); setError(''); }}
               className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                mode === 'register' ? 'bg-cyan-400/10 text-cyan-400' : 'text-gray-500 hover:text-gray-300'
+                mode === 'register' ? 'bg-blue-400/10 text-blue-400' : 'text-gray-500 hover:text-gray-300'
               }`}
             >
               რეგისტრაცია
@@ -258,13 +262,13 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan"
+                className="w-full rounded-lg bg-gradient-to-r from-blue-400 to-pink-500 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan"
               >
                 {isSubmitting ? 'მიმდინარეობს...' : 'შესვლა'}
               </button>
               <p className="text-center text-xs text-gray-600">
                 არ გაქვთ ანგარიში?{' '}
-                <button type="button" onClick={() => setMode('register')} className="text-cyan-400 hover:text-cyan-300">
+                <button type="button" onClick={() => setMode('register')} className="text-blue-400 hover:text-blue-300">
                   დარეგისტრირდით
                 </button>
               </p>
@@ -280,7 +284,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                   type="button"
                   onClick={() => { setRegisterRole('user'); setError(''); }}
                   className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                    registerRole === 'user' ? 'bg-cyan-400/10 text-cyan-400' : 'text-gray-500 hover:text-gray-300'
+                    registerRole === 'user' ? 'bg-blue-400/10 text-blue-400' : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
                   მე მომხმარებელი ვარ
@@ -289,7 +293,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                   type="button"
                   onClick={() => { setRegisterRole('author'); setError(''); }}
                   className={`flex-1 rounded-lg py-2 text-sm font-semibold transition-colors ${
-                    registerRole === 'author' ? 'bg-violet-400/10 text-violet-400' : 'text-gray-500 hover:text-gray-300'
+                    registerRole === 'author' ? 'bg-pink-400/10 text-pink-400' : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
                   მე ავტორი ვარ
@@ -365,7 +369,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                 </>
               )}
 
-              <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-4">
+              <div className="rounded-lg border border-pink-500/20 bg-pink-500/5 p-4">
                 <label className="mb-1.5 block text-sm font-medium text-gray-300">თქვენი Instagram-ის ან YouTube-ის პროფილის ბმული *</label>
                 <div className="relative">
                   <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600" />
@@ -380,10 +384,10 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                   type="button"
                   onClick={() => setAgreeTerms(!agreeTerms)}
                   className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                    agreeTerms ? 'border-cyan-400 bg-cyan-400/20' : 'border-[#2a2a32] bg-[#0a0a0c]'
+                    agreeTerms ? 'border-blue-400 bg-blue-400/20' : 'border-[#2a2a32] bg-[#0a0a0c]'
                   }`}
                 >
-                  {agreeTerms && <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />}
+                  {agreeTerms && <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />}
                 </button>
                 <span className="text-xs leading-relaxed text-gray-400">
                   ვეთანხმები მომხმარებლის შეთანხმების პირობებს *
@@ -394,10 +398,10 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                   type="button"
                   onClick={() => setAgreePrivacy(!agreePrivacy)}
                   className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors ${
-                    agreePrivacy ? 'border-cyan-400 bg-cyan-400/20' : 'border-[#2a2a32] bg-[#0a0a0c]'
+                    agreePrivacy ? 'border-blue-400 bg-blue-400/20' : 'border-[#2a2a32] bg-[#0a0a0c]'
                   }`}
                 >
-                  {agreePrivacy && <CheckCircle2 className="h-3.5 w-3.5 text-cyan-400" />}
+                  {agreePrivacy && <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />}
                 </button>
                 <span className="text-xs leading-relaxed text-gray-400">
                   ვეთანხმები პერსონალურ მონაცემთა დამუშავების პოლიტიკას *
@@ -408,7 +412,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan"
+                className="w-full rounded-lg bg-gradient-to-r from-blue-400 to-pink-500 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan"
               >
                 {isSubmitting ? 'იგზავნება...' : 'განაცხადის გაგზავნა'}
               </button>
@@ -425,7 +429,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                 <input type={showPassword ? 'text' : 'password'} value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} className={`${inputClass} mt-1`} />
               </label>
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="flex items-center gap-2 text-xs text-gray-400">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{showPassword ? 'პაროლის დამალვა' : 'პაროლის ჩვენება'}</button>
-              <button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 py-3 text-sm font-bold text-black disabled:opacity-50">{isSubmitting ? 'ინახება...' : 'პაროლის შენახვა'}</button>
+              <button type="submit" disabled={isSubmitting} className="w-full rounded-lg bg-gradient-to-r from-blue-400 to-pink-500 py-3 text-sm font-bold text-black disabled:opacity-50">{isSubmitting ? 'ინახება...' : 'პაროლის შენახვა'}</button>
             </form>
           )}
 

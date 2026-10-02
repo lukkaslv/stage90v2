@@ -1,6 +1,6 @@
 # Stage 90 achievements
 
-Apply `migrations/20261002000009_achievements.sql` after the earlier migrations. The migration leaves the old `achievements` table intact; its unknown legacy rows are not converted to new grants. New definitions and grants use stable keys and a year scope (`0` for lifetime). All dates and calendar boundaries use `Asia/Tbilisi`.
+Apply `migrations/20261002000009_achievements.sql` and then `migrations/20261002000010_achievement_existing_activity.sql` after the earlier migrations. The second migration issues grants for qualifying reviews that existed before achievement triggers were installed. It is safe to retry. The migrations leave the old `achievements` table intact; its unknown legacy rows are not converted to new grants. New definitions and grants use stable keys and a year scope (`0` for lifetime). All dates and calendar boundaries use `Asia/Tbilisi`.
 
 ## Rules
 
@@ -18,6 +18,6 @@ Database triggers recompute affected user grants after review, author endorsemen
 
 `finalize_annual_release_awards(year)` can only run after the Tbilisi year ends. It persists one result per award and format, including the score, independent voter counts, title/artist snapshot, rule version, and audit record. Repeated runs leave final results unchanged. An admin may call `finalize_annual_release_awards(year, true, 'reason')` to correct results; the previous row is retained in the audit table. A daily `pg_cron` job is registered if the extension is available. If not, register a production scheduler that runs `select public.finalize_annual_release_awards(extract(year from now() at time zone 'Asia/Tbilisi')::integer - 1);` daily. The function checks the Tbilisi calendar itself, so the scheduler's local timezone does not determine eligibility. The scheduler must run as the database owner.
 
-After migration, run `select public.reconcile_achievements(2026, 2026);` with a database owner connection, or call it as an authenticated admin. This is safe to repeat. Choose earlier years only when review timestamps and release flags are reliable. It does not invent historical annual winners. Earned dates are derived from the first source event that completed each threshold. Do not manually finalize historical years without reviewing publication dates.
+The second migration automatically reconciles existing reviews. For later repairs, run `select public.reconcile_achievements(2026, 2026);` with a database owner connection, or call it as an authenticated admin. This is safe to repeat. Choose earlier years only when review timestamps and release flags are reliable. It does not invent historical annual winners. Earned dates are derived from the first source event that completed each threshold. Do not manually finalize historical years without reviewing publication dates.
 
 The SQL migration and RPC require a running Supabase PostgreSQL instance for validation. The local checkout has no PostgreSQL, Supabase CLI, or test database, so database integration tests must run against a deployed or local Supabase project before enabling the page. Keep the Achievements tab in maintenance mode until the migration and scheduler are verified.

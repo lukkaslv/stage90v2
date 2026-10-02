@@ -16,17 +16,21 @@ interface NavbarProps {
   onBrandClick?: () => void;
   activeTab: PageId;
   onTabChange: (tab: PageId) => void;
+  onOpenRelease: (id: string) => void;
   onAdminOpen: () => void;
   collapsed: boolean;
   onToggleCollapsed: () => void;
 }
 
-export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTab, onTabChange, onAdminOpen, collapsed, onToggleCollapsed }: NavbarProps) {
+export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTab, onTabChange, onOpenRelease, onAdminOpen, collapsed, onToggleCollapsed }: NavbarProps) {
   const { user, logout, isAuthenticated, refreshProfile } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [reviewCount, setReviewCount] = useState(0);
   const [showReleaseSubmission, setShowReleaseSubmission] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; title: string; artist: string }>>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -49,6 +53,29 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
     return () => window.removeEventListener('keydown', onEscape);
   }, [mobileOpen]);
 
+  useEffect(() => {
+    const term = searchQuery.trim();
+    if (term.length < 2 || !supabase) {
+      setSearchLoading(false);
+      return;
+    }
+    const client = supabase;
+    let cancelled = false;
+    const search = async () => {
+      const pattern = `%${term.replace(/%/g, '\\%').replace(/_/g, '\\_')}%`;
+      const [byTitle, byArtist] = await Promise.all([
+        client.from('releases').select('id,title,artist_name').eq('is_active', true).ilike('title', pattern).limit(6),
+        client.from('releases').select('id,title,artist_name').eq('is_active', true).ilike('artist_name', pattern).limit(6),
+      ]);
+      if (cancelled) return;
+      const rows = [...(byTitle.data ?? []), ...(byArtist.data ?? [])];
+      setSearchResults([...new Map(rows.map((row) => [String(row.id), { id: String(row.id), title: String(row.title ?? ''), artist: String(row.artist_name ?? '') }])).values()].slice(0, 6));
+      setSearchLoading(false);
+    };
+    void search();
+    return () => { cancelled = true; };
+  }, [searchQuery]);
+
   const closeMobile = () => setMobileOpen(false);
   const openSearch = () => {
     if (collapsed) onToggleCollapsed();
@@ -65,11 +92,11 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
       {mobileOpen && <button type="button" onClick={closeMobile} aria-label="მენიუს დახურვა" className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden" />}
       <aside className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-[#25252d] bg-[#101014]/95 shadow-[18px_0_48px_rgba(0,0,0,0.25)] backdrop-blur-xl transition-[width,transform] duration-300 ease-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 ${collapsed ? 'lg:w-[76px]' : 'lg:w-72'}`} aria-label="მთავარი მენიუ">
         <div className={`flex items-center justify-between gap-2 border-b border-[#25252d] px-4 py-5 ${collapsed ? 'lg:flex-col lg:px-2' : ''}`}>
-          <button type="button" onClick={() => { onBrandClick?.(); closeMobile(); }} aria-label="#STAGE90 — მთავარი გვერდი" className="min-w-0 text-left font-sans text-lg font-bold tracking-[0.1em] text-white">
-            <span className={labelVisibility}>#STAGE<span className="text-cyan-400">90</span></span>
-            {collapsed && <span className="hidden text-base text-cyan-400 lg:inline">90</span>}
+          <button type="button" onClick={() => { onBrandClick?.(); closeMobile(); }} aria-label="Stage 90 — მთავარი გვერდი" className="stage-brand min-w-0 text-left text-white">
+            <img src="/stage90-mark.svg" alt="" className="stage-brand-mark" />
+            <span className={labelVisibility}><strong>STAGE 90</strong><small>ქართული მუსიკის სცენა</small></span>
           </button>
-          <button type="button" onClick={onToggleCollapsed} aria-label={collapsed ? 'მენიუს გაშლა' : 'მენიუს შეკეცვა'} aria-expanded={!collapsed} className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/5 hover:text-cyan-300 lg:flex">
+          <button type="button" onClick={onToggleCollapsed} aria-label={collapsed ? 'მენიუს გაშლა' : 'მენიუს შეკეცვა'} aria-expanded={!collapsed} className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-white/5 hover:text-blue-300 lg:flex">
             {collapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
           </button>
           <button type="button" onClick={closeMobile} aria-label="მენიუს დახურვა" className="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 hover:bg-white/5 hover:text-white lg:hidden"><X className="h-5 w-5" /></button>
@@ -78,16 +105,19 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
         <div className="px-3 pt-5">
           <div className={`relative ${collapsed ? 'lg:hidden' : ''}`}>
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-            <input ref={searchRef} type="search" placeholder="ძებნა..." aria-label="ძებნა" className="w-full rounded-xl border border-[#2a2a32] bg-[#18181d] py-2.5 pl-10 pr-3 text-sm text-gray-200 placeholder-gray-500 transition-colors focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30" />
+            <input ref={searchRef} type="search" value={searchQuery} onChange={(event) => { setSearchQuery(event.target.value); setSearchLoading(event.target.value.trim().length >= 2); if (event.target.value.trim().length < 2) setSearchResults([]); }} onKeyDown={(event) => { if (event.key === 'Escape') setSearchQuery(''); if (event.key === 'Enter' && searchResults[0]) { onOpenRelease(searchResults[0].id); setSearchQuery(''); closeMobile(); } }} placeholder="რელიზის ან არტისტის ძებნა" aria-label="რელიზის ან არტისტის ძებნა" aria-controls="stage-search-results" className="w-full rounded-xl border border-[#2a2a32] bg-[#18181d] py-2.5 pl-10 pr-3 text-sm text-gray-200 placeholder-gray-500 transition-colors focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30" />
+            {searchQuery.trim().length >= 2 && <div id="stage-search-results" aria-live="polite" className="absolute left-0 right-0 top-full z-30 mt-2 max-h-72 overflow-y-auto rounded-md border border-[#4d5060] bg-[#1b1d24] p-1 shadow-2xl">
+              {searchLoading ? <p className="px-3 py-3 text-xs text-gray-400">იძებნება...</p> : searchResults.length === 0 ? <p className="px-3 py-3 text-xs text-gray-400">რელიზი ან არტისტი ვერ მოიძებნა.</p> : searchResults.map((result) => <button key={result.id} type="button" onClick={() => { onOpenRelease(result.id); setSearchQuery(''); closeMobile(); }} className="block w-full rounded-sm px-3 py-2 text-left hover:bg-[#2b2f3a] focus-visible:bg-[#2b2f3a]"><span className="block truncate text-sm font-semibold text-white">{result.title}</span><span className="block truncate text-xs text-gray-400">{result.artist}</span></button>)}
+            </div>}
           </div>
-          {collapsed && <button type="button" onClick={openSearch} aria-label="ძებნა" title="ძებნა" className="hidden h-11 w-full items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-white/5 hover:text-cyan-300 lg:flex"><Search className="h-5 w-5" /></button>}
+          {collapsed && <button type="button" onClick={openSearch} aria-label="ძებნა" title="ძებნა" className="hidden h-11 w-full items-center justify-center rounded-xl text-gray-400 transition-colors hover:bg-white/5 hover:text-blue-300 lg:flex"><Search className="h-5 w-5" /></button>}
         </div>
 
         <nav aria-label="გვერდები" className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-6">
           {categoryTabs.map((tab) => {
             const Icon = tabIcons[tab.id];
             const active = activeTab === tab.id;
-            return <button key={tab.id} type="button" onClick={() => { onTabChange(tab.id); closeMobile(); }} aria-current={active ? 'page' : undefined} aria-label={tab.label} title={collapsed ? tab.label : undefined} className={`${itemClass} ${active ? 'border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 shadow-[inset_3px_0_0_#22d3ee]' : 'border border-transparent text-gray-400 hover:bg-white/5 hover:text-white'}`}>
+            return <button key={tab.id} type="button" onClick={() => { onTabChange(tab.id); closeMobile(); }} aria-current={active ? 'page' : undefined} aria-label={tab.label} title={collapsed ? tab.label : undefined} className={`${itemClass} ${active ? 'border border-blue-400/20 bg-blue-400/10 text-blue-300 shadow-[inset_3px_0_0_#ff2299]' : 'border border-transparent text-gray-400 hover:bg-white/5 hover:text-white'}`}>
               <Icon className="h-5 w-5 shrink-0" />
               <span className={labelVisibility}>{tab.label}</span>
             </button>;
@@ -102,7 +132,7 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
           {isAuthenticated && user ? (
             <div className="relative">
               <button type="button" onClick={() => setShowUserMenu((open) => !open)} aria-expanded={showUserMenu} aria-haspopup="menu" aria-label={user.displayName} title={collapsed ? user.displayName : undefined} className={`${itemClass} border border-[#2a2a32] text-gray-200 hover:border-gray-500`}>
-                <UserRound className="h-5 w-5 shrink-0 text-cyan-300" />
+                <UserRound className="h-5 w-5 shrink-0 text-blue-300" />
                 <span className={`min-w-0 flex-1 truncate ${labelVisibility}`}>{user.displayName}</span>
                 <span className={labelVisibility}>{user.isVerified && <VerificationBadge />}</span>
               </button>
@@ -124,13 +154,13 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
             </div>
           ) : <div className="space-y-2">
             <button type="button" onClick={() => { onOpenAuth('login'); closeMobile(); }} aria-label="შესვლა" title={collapsed ? 'შესვლა' : undefined} className={`${itemClass} border border-[#2a2a32] text-gray-200 hover:border-gray-500 hover:bg-white/5`}><LogIn className="h-5 w-5 shrink-0" /><span className={labelVisibility}>შესვლა</span></button>
-            <button type="button" onClick={() => { onOpenAuth('register'); closeMobile(); }} aria-label="რეგისტრაცია" title={collapsed ? 'რეგისტრაცია' : undefined} className={`${itemClass} bg-gradient-to-r from-cyan-400 to-violet-500 text-black hover:opacity-90 ${collapsed ? 'lg:bg-none lg:text-cyan-300 lg:hover:bg-white/5' : ''}`}><UserPlus className="h-5 w-5 shrink-0" /><span className={labelVisibility}>რეგისტრაცია</span></button>
+            <button type="button" onClick={() => { onOpenAuth('register'); closeMobile(); }} aria-label="რეგისტრაცია" title={collapsed ? 'რეგისტრაცია' : undefined} className={`${itemClass} bg-gradient-to-r from-blue-400 to-pink-500 text-black hover:opacity-90 ${collapsed ? 'lg:bg-none lg:text-blue-300 lg:hover:bg-white/5' : ''}`}><UserPlus className="h-5 w-5 shrink-0" /><span className={labelVisibility}>რეგისტრაცია</span></button>
           </div>}
         </div>
 
         <div className={`border-t border-[#25252d] px-4 py-4 ${collapsed ? 'lg:px-2' : ''}`}>
-          <div className={`flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2 text-xs font-medium text-cyan-300 ${collapsed ? 'lg:justify-center lg:px-0' : ''}`} title="ახალი სეზონი · 2026">
-            <Sparkles className="h-4 w-4 shrink-0" /><span className={labelVisibility}>ახალი სეზონი · 2026</span>
+          <div className={`stage-sidebar-note flex items-center gap-2 px-3 py-2 text-xs font-medium ${collapsed ? 'lg:justify-center lg:px-0' : ''}`}>
+            <Sparkles className="h-4 w-4 shrink-0" /><span className={labelVisibility}>სცენა ყველასთვის</span>
           </div>
         </div>
       </aside>

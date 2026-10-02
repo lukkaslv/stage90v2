@@ -6,11 +6,9 @@ function RatingBar({ label, value, max = 100 }: { label: string; value: number; 
   return (
     <div className="flex items-center gap-2">
       <span className="w-20 shrink-0 text-[11px] text-gray-500">{label}</span>
-      <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#1e1e24]">
+      <div className="h-1.5 flex-1 overflow-hidden bg-[#30343e]">
         <div
-          className={`h-full rounded-full transition-all ${
-            value / max >= 0.9 ? 'bg-cyan-400' : value / max >= 0.8 ? 'bg-violet-400' : 'bg-gray-500'
-          }`}
+          className="h-full bg-[#b8becb] transition-all"
           style={{ width: `${(value / max) * 100}%` }}
         />
       </div>
@@ -23,7 +21,7 @@ export default function ReviewCard({ review }: { review: Review }) {
   const experienceRatings = 'response' in review.ratings ? review.ratings : null;
   const legacyRatings = 'production' in review.ratings ? review.ratings : null;
   return (
-    <article className="card-hover min-w-0 max-w-full overflow-hidden rounded-xl border border-[#1e1e24] bg-[#121215] p-5">
+    <article className="stage-review-card card-hover min-w-0 max-w-full overflow-hidden rounded-xl border border-[#1e1e24] bg-[#121215] p-5">
       {/* Header */}
       <div className="flex items-start gap-3">
         <img
@@ -43,13 +41,7 @@ export default function ReviewCard({ review }: { review: Review }) {
         </div>
         {/* Total score */}
         <div className="shrink-0 text-right">
-          <div
-            className={`text-2xl font-extrabold leading-none ${
-              review.totalScore >= 90 ? 'text-cyan-400' : review.totalScore >= 80 ? 'text-violet-400' : 'text-gray-300'
-            }`}
-          >
-            {review.totalScore}
-          </div>
+          <div className="stage-review-score text-2xl font-extrabold leading-none">{review.totalScore}<small>/90</small></div>
           <span className="text-[10px] text-gray-600">ჯამური</span>
         </div>
       </div>
@@ -82,7 +74,7 @@ export default function ReviewCard({ review }: { review: Review }) {
       {/* Footer */}
       <div className="mt-4 flex items-center justify-between border-t border-[#1e1e24] pt-3">
         <span className="text-[11px] text-gray-600">{review.date}</span>
-        <button className="text-[11px] font-medium text-cyan-400 transition-colors hover:text-cyan-300">
+        <button className="text-[11px] font-medium text-blue-400 transition-colors hover:text-blue-300">
           სრული რეცენზია →
         </button>
       </div>

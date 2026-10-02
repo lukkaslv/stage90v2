@@ -1,5 +1,5 @@
 import { lazy, Suspense, useRef, useState, useEffect, type MouseEvent } from 'react';
-import { ChevronLeft, ChevronRight, TrendingUp, Clock, Award } from 'lucide-react';
+import { ArrowUpRight, ChevronLeft, ChevronRight, TrendingUp, Clock, Award } from 'lucide-react';
 import { AuthProvider } from '@/context/AuthContext';
 import Navbar from '@/components/Navbar';
 import TopCarousel from '@/components/TopCarousel';
@@ -180,7 +180,7 @@ function AppContent() {
   if (selectedRelease) {
     return (
       <div className="min-h-screen bg-[#0a0a0c]">
-        <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+        <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onOpenRelease={openRelease} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
         <div className={contentClass}>
         {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
         {maintenanceMap.releases?.is_maintenance
@@ -205,7 +205,7 @@ function AppContent() {
 
   if (selectedReview) {
     return <div className="min-h-screen bg-[#0a0a0c]">
-      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onOpenRelease={openRelease} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
       <div className={contentClass}>
       {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
       <ReviewDetail id={selectedReview} onReleaseClick={openRelease} onBack={returnFromRelease} />
@@ -216,7 +216,7 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0c]">
-      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onOpenRelease={openRelease} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
       <div className={contentClass}>
       {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
       {adminMode && user?.role === 'admin' ? <Suspense fallback={<SectionLoader />}><AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /></Suspense> : null}
@@ -241,54 +241,20 @@ function AppContent() {
 
       {!adminMode && !section && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'releases' && (
         <>
-          {/* Hero banner */}
-          <section className="relative overflow-hidden border-b border-[#1e1e24]">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-violet-500/5" />
-            <div
-              className="absolute inset-0 opacity-30"
-              style={{
-                backgroundImage:
-                  'radial-gradient(circle at 20% 50%, rgba(34,211,238,0.08) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(167,139,250,0.08) 0%, transparent 50%)',
-              }}
-            />
-            <div className="relative mx-auto max-w-7xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-              <div className="flex flex-col items-start gap-4">
-                <div className="mb-5 max-w-2xl">
-                  <div className="text-4xl font-semibold leading-none tracking-[0.12em] text-white sm:text-5xl md:text-6xl">
-                    #STAGE90
-                  </div>
-                  <p className="mt-5 text-sm font-medium tracking-[0.35em] text-[#F5F5F7]/80 sm:text-base">ეს არის კავშირი</p>
-                </div>
-                <h1 className="hidden max-w-2xl text-3xl font-extrabold leading-tight text-white sm:text-4xl lg:text-5xl">
-                  ქართული მუსიკის რეცენზიები და რეიტინგები —{' '}
-                  <span className="text-glow-cyan text-cyan-400">სრულად თქვენთვის</span>
-                </h1>
-                <p className="mt-1 max-w-xl text-sm leading-relaxed text-gray-400 sm:text-base">არტისტები, ინფლუენსერები, მედია და მსმენელები. ადგილი, სადაც ხდება კონექტი: ვხედავთ, ვინ არის ტოპებში, ვის ირჩევს ხალხი და რას ამბობს ექსპერტული მედია ამ თამაშში.</p>
-                <p className="hidden max-w-xl text-sm text-gray-400 sm:text-base">
-                  აღმოაჩინეთ ახალი რელიზები, წაიკითხეთ მედიის რეცენზიები და შეაფასეთ თქვენი საყვარელი მუსიკოსების ნამუშევრები.
-                </p>
-
-                {/* Stats row */}
-                <div className="mt-2 flex flex-wrap items-center gap-4 sm:gap-6">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-cyan-400" />
-                    <span className="text-sm text-gray-300">
-                      <span className="font-bold text-white">{releaseCount}</span> რელიზი
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-violet-400" />
-                    <span className="text-sm text-gray-300">
-                      <span className="font-bold text-white">{reviewCount}</span> რეცენზია
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Award className="h-4 w-4 text-cyan-400" />
-                    <span className="text-sm text-gray-300">
-                      <span className="font-bold text-white">90</span> ტოპ რეიტინგი
-                    </span>
-                  </div>
-                </div>
+          <section className="stage-hero" aria-labelledby="stage-hero-title">
+            <div className="stage-hero-photo" aria-hidden="true" />
+            <div className="stage-hero-inner mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+              <p className="stage-eyebrow"><span className="stage-live-dot" /> ქართული მუსიკის სცენა</p>
+              <h1 id="stage-hero-title">მუსიკა,<br /><span>რომელიც გვაერთიანებს.</span></h1>
+              <p className="stage-hero-copy">აღმოაჩინე ახალი რელიზები, მოუსმინე არტისტებს და წაიკითხე გულწრფელი რეცენზიები. შენი ხმა სცენის ნაწილია.</p>
+              <div className="stage-hero-actions">
+                <button type="button" onClick={() => openSection('all-releases')} className="stage-primary-action">აღმოაჩინე რელიზები <ArrowUpRight className="h-4 w-4" /></button>
+                <button type="button" onClick={() => handleTabChange('top90')} className="stage-secondary-action">ნახე ტოპ-90 <ArrowUpRight className="h-4 w-4" /></button>
+              </div>
+              <div className="stage-hero-stats" aria-label="პლატფორმის მონაცემები">
+                <div><TrendingUp aria-hidden="true" /><strong>{releaseCount}</strong><span>რელიზი</span></div>
+                <div><Clock aria-hidden="true" /><strong>{reviewCount}</strong><span>რეცენზია</span></div>
+                <div><Award aria-hidden="true" /><strong>90</strong><span>ქულიანი სისტემა</span></div>
               </div>
             </div>
           </section>
@@ -296,23 +262,23 @@ function AppContent() {
           {/* Main content */}
           <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
             <div className="space-y-2">
-              <button type="button" onClick={() => openSection('daily-top-15')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <button type="button" onClick={() => openSection('daily-top-15')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <Top15Daily onReleaseClick={openRelease} preview />
             </div>
 
             <div className="space-y-2">
-              <button type="button" onClick={() => openSection('author-picks')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <button type="button" onClick={() => openSection('author-picks')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <AuthorsPicks onReviewClick={openReview} preview />
             </div>
 
             <div className="space-y-2">
-              <button type="button" onClick={() => openSection('author-comments')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <button type="button" onClick={() => openSection('author-comments')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <AuthorComments refreshVersion={refreshKey + reviewVersion + commentVersion} releaseById={releaseById} onReleaseClick={openRelease} preview />
             </div>
 
             {/* Section 1: Top daily releases */}
             <div className="space-y-2">
-              <button type="button" onClick={() => openSection('top-releases')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <button type="button" onClick={() => openSection('top-releases')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <TopCarousel releases={topCatalog} onReleaseClick={openRelease} userReviewsMap={userReviewsMap} />
             </div>
 
@@ -320,15 +286,15 @@ function AppContent() {
             <section className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-400/10">
-                    <TrendingUp className="h-4 w-4 text-violet-400" />
+                  <span className="flex h-7 w-7 items-center justify-center rounded-md bg-pink-400/10">
+                    <TrendingUp className="h-4 w-4 text-pink-400" />
                   </span>
                   <h2 className="text-xl font-bold text-white sm:text-2xl">დამატებული რელიზები</h2>
                 </div>
-                <button type="button" onClick={() => openSection('all-releases')} className="text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+                <button type="button" onClick={() => openSection('all-releases')} className="text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               </div>
               <div className="group relative">
-                <button type="button" onClick={() => moveAddedReleases(-530)} aria-label="წინა რელიზები" className="absolute left-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/10 bg-[#0a0a0c]/90 p-2 text-white shadow-xl transition hover:border-cyan-300/60 hover:text-cyan-300 md:block"><ChevronLeft className="h-5 w-5" /></button>
+                <button type="button" onClick={() => moveAddedReleases(-530)} aria-label="წინა რელიზები" className="absolute left-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/10 bg-[#0a0a0c]/90 p-2 text-white shadow-xl transition hover:border-blue-300/60 hover:text-blue-300 md:block"><ChevronLeft className="h-5 w-5" /></button>
                 <div ref={addedReleasesScrollRef} onMouseDown={startAddedReleasesDrag} onMouseMove={moveAddedReleasesDrag} onMouseUp={stopAddedReleasesDrag} onMouseLeave={stopAddedReleasesDrag} onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="flex cursor-grab items-stretch gap-4 overflow-x-auto overflow-y-hidden scroll-smooth scrollbar-none py-2 px-1 select-none active:cursor-grabbing" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                 {latestCatalog.slice(0, 6).map((release) => (
                   <div key={release.id} className="w-[220px] shrink-0 flex flex-col sm:w-[240px] md:w-[250px]">
@@ -336,17 +302,17 @@ function AppContent() {
                   </div>
                 ))}
                 </div>
-                <button type="button" onClick={() => moveAddedReleases(530)} aria-label="შემდეგი რელიზები" className="absolute right-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/10 bg-[#0a0a0c]/90 p-2 text-white shadow-xl transition hover:border-cyan-300/60 hover:text-cyan-300 md:block"><ChevronRight className="h-5 w-5" /></button>
+                <button type="button" onClick={() => moveAddedReleases(530)} aria-label="შემდეგი რელიზები" className="absolute right-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/10 bg-[#0a0a0c]/90 p-2 text-white shadow-xl transition hover:border-blue-300/60 hover:text-blue-300 md:block"><ChevronRight className="h-5 w-5" /></button>
               </div>
             </section>
 
             <div className="space-y-2">
-              <button type="button" onClick={() => openSection('media-reviews')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <button type="button" onClick={() => openSection('media-reviews')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <MediaReviews refreshVersion={refreshKey + reviewVersion} releaseById={releaseById} onReviewClick={openReview} />
             </div>
 
             <div className="space-y-2">
-              <button type="button" onClick={() => openSection('reviews')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
+              <button type="button" onClick={() => openSection('reviews')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <RecentReviewsFeed releaseById={releaseById} releases={releaseCatalog} onReleaseClick={openRelease} onReviewClick={openReview} />
             </div>
 
@@ -364,9 +330,8 @@ function AppContent() {
             </p>
             <p className="text-xs text-gray-600">© 2026 #STAGE90. ეს არის კავშირი. ყველა უფლება დაცულია.</p>
             <div className="flex items-center gap-4 text-xs text-gray-600">
-              <button className="transition-colors hover:text-gray-400">წესები</button>
-              <button className="transition-colors hover:text-gray-400">კონტაქტი</button>
-              <button className="transition-colors hover:text-gray-400">კონფიდენციალობა</button>
+              <button type="button" onClick={() => handleTabChange('faq')} className="transition-colors hover:text-white">წესები და კითხვები</button>
+              <button type="button" onClick={() => setShowAbout(true)} className="transition-colors hover:text-white">კავშირი</button>
             </div>
           </div>
         </div>

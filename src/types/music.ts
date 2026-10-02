@@ -36,11 +36,12 @@ export interface Release {
 }
 
 export function releaseTypeLabel(release: Pick<Release, 'type' | 'release_type'>): string {
-  const rawType = String(release.release_type ?? '').trim();
+  const rawType = String(release.release_type ?? release.type ?? '').trim();
   const normalizedType = rawType.toLowerCase();
   if (normalizedType === 'single' || rawType === 'სინგლი') return 'სინგლი';
   if (normalizedType === 'track' || rawType === 'ტრეკი') return 'ტრეკი';
   if (normalizedType === 'album' || rawType === 'ალბომი') return 'ალბომი';
+  if (normalizedType === 'ep' || rawType === 'ეპი') return 'ეპი';
   return rawType;
 }
 
@@ -61,7 +62,7 @@ export const VALUE_TIER_CONFIG: Record<ValueTier, { color: string; glow: string;
   'ვერცხლი': { color: 'text-gray-300', glow: 'shadow-[0_0_20px_-4px_rgba(203,213,225,0.4)]', gradient: 'from-gray-400/20 to-gray-500/10' },
   'ოქრო': { color: 'text-amber-300', glow: 'shadow-[0_0_20px_-4px_rgba(251,191,36,0.4)]', gradient: 'from-amber-400/20 to-amber-600/10' },
   'ზურმუხტი': { color: 'text-teal-300', glow: 'shadow-[0_0_20px_-4px_rgba(45,212,191,0.4)]', gradient: 'from-teal-400/20 to-teal-600/10' },
-  'საფირონი': { color: 'text-cyan-300', glow: 'shadow-[0_0_20px_-4px_rgba(34,211,238,0.4)]', gradient: 'from-cyan-400/20 to-cyan-600/10' },
+  'საფირონი': { color: 'text-[#91abc7]', glow: 'shadow-none', gradient: 'from-[#91abc7]/20 to-[#91abc7]/10' },
   'ლალი': { color: 'text-rose-400', glow: 'shadow-[0_0_24px_-2px_rgba(251,113,133,0.5)]', gradient: 'from-rose-400/20 to-rose-600/10' },
 };
 

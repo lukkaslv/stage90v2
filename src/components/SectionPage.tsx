@@ -74,10 +74,10 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
           <div className="mb-3 flex items-center gap-2 text-sm text-gray-300">
             <span className="font-semibold">{author}</span>
             {profile && <RoleBadge role={String(profile.role ?? 'user')} category={String(profile.author_category ?? '')} isVerified={Boolean(profile.is_verified)} />}
-            {isReview && <span className="ml-auto font-bold text-cyan-300">{Number(row.total_score ?? 0)}</span>}
+            {isReview && <span className="stage-review-score ml-auto font-bold">{Number(row.total_score ?? 0)}<small>/90</small></span>}
           </div>
           <button type="button" onClick={() => section === 'author-picks' ? onReviewClick(String(likedReview?.id ?? '')) : isReview ? onReviewClick(String(row.id)) : onReleaseClick(releaseId)} className="w-full text-left">
-            <h2 className="line-clamp-3 break-words font-semibold text-white hover:text-cyan-300">{title}</h2>
+            <h2 className="line-clamp-3 break-words font-semibold text-white hover:text-blue-300">{title}</h2>
             {section === 'author-picks' && Boolean(likedReview?.content) && <p className="mt-2 line-clamp-3 break-all text-sm text-gray-400">{String(likedReview?.content)}</p>}
             {release && <p className="mt-2 truncate text-xs text-gray-400">{String(release.artist_name ?? '')} · {String(release.title ?? '')}</p>}
           </button>

@@ -65,6 +65,6 @@ export default function TopReleasesPage({ onReleaseClick }: { onReleaseClick: (r
     </div>
     {ranking.length === 0 && !loading && !error && <p className="py-12 text-center text-gray-400">რელიზები ჯერ არ არის.</p>}
     {error && <p className="py-5 text-center text-rose-300">მონაცემების ჩატვირთვა ვერ მოხერხდა.</p>}
-    {ranking.length > limit && <button type="button" onClick={() => setLimit((current) => current + 20)} disabled={loading} className="mx-auto mt-8 block rounded-lg border border-cyan-400/30 px-5 py-2 text-sm font-semibold text-cyan-300 disabled:opacity-50">კიდევ 20 რელიზის ნახვა</button>}
+    {ranking.length > limit && <button type="button" onClick={() => setLimit((current) => current + 20)} disabled={loading} className="mx-auto mt-8 block rounded-lg border border-blue-400/30 px-5 py-2 text-sm font-semibold text-blue-300 disabled:opacity-50">კიდევ 20 რელიზის ნახვა</button>}
   </main>;
 }

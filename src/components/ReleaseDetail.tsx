@@ -32,6 +32,7 @@ import {
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import RoleBadge, { VerificationBadge } from '@/components/RoleBadge';
+import ScoreTriplet from '@/components/ScoreTriplet';
 import { releaseCommunityScore, releaseValueTier, STRICT_VALUE_TIER_CONFIG, valueTierFromScore } from '@/lib/valueTier';
 
 interface ReleaseDetailProps {
@@ -464,7 +465,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     return (
       <div className="min-h-screen bg-[#0a0a0c] px-4 py-20 text-center text-gray-500 animate-slide-in">
         <p>რელიზი ვერ მოიძებნა.</p>
-        <button onClick={onBack} className="mt-4 rounded-lg border border-[#2a2a32] px-4 py-2 text-sm text-gray-300 transition-colors hover:border-cyan-400/50 hover:text-cyan-300">უკან დაბრუნება</button>
+        <button onClick={onBack} className="mt-4 rounded-lg border border-[#2a2a32] px-4 py-2 text-sm text-gray-300 transition-colors hover:border-blue-400/50 hover:text-blue-300">უკან დაბრუნება</button>
       </div>
     );
   }
@@ -514,22 +515,17 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     setAudioMessage('ტრეკს მოსასმენი ბმული არ აქვს.');
     window.setTimeout(() => setAudioMessage(''), 3200);
   };
-  const scoreColor = (s: number) =>
-    s >= 90 ? 'text-cyan-300 border-cyan-400/30 bg-cyan-400/10' :
-    s >= 80 ? 'text-violet-300 border-violet-400/30 bg-violet-400/10' :
-    'text-gray-300 border-gray-500/30 bg-gray-500/10';
-
   return (
     <div className="relative min-h-screen bg-[#0a0a0c] animate-slide-in">
-      {audioMessage && createPortal(<div role="status" className="fixed bottom-5 left-1/2 z-[90] -translate-x-1/2 rounded-lg border border-cyan-400/30 bg-[#121215] px-4 py-3 text-sm font-semibold text-cyan-300 shadow-[0_0_20px_rgba(6,182,212,0.2)]">{audioMessage}</div>, document.body)}
-      {youtubePlayerUrl && createPortal(<div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true"><div className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-cyan-400/30 bg-[#121215] shadow-2xl"><button type="button" onClick={(event) => { event.stopPropagation(); setYoutubePlayerUrl(null); }} className="absolute right-3 top-2 z-10 rounded-full bg-black/70 px-3 py-1 text-xl text-white" aria-label="დახურვა">×</button><div className="aspect-video"><iframe src={youtubePlayerUrl} title={activeRelease.title} className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div></div></div>, document.body)}
-      {audioUrl && createPortal(<div className="fixed bottom-5 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-cyan-400/30 bg-[#121215] p-3 shadow-2xl"><audio ref={audioRef} src={audioUrl} controls autoPlay className="h-8" /><button type="button" onClick={(event) => { event.stopPropagation(); setAudioUrl(null); }} className="text-lg text-gray-400 hover:text-white" aria-label="დახურვა">×</button></div>, document.body)}
+      {audioMessage && createPortal(<div role="status" className="fixed bottom-5 left-1/2 z-[90] -translate-x-1/2 rounded-lg border border-blue-400/30 bg-[#121215] px-4 py-3 text-sm font-semibold text-blue-300 shadow-[0_0_20px_rgba(6,182,212,0.2)]">{audioMessage}</div>, document.body)}
+      {youtubePlayerUrl && createPortal(<div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" role="dialog" aria-modal="true"><div className="relative w-full max-w-3xl overflow-hidden rounded-xl border border-blue-400/30 bg-[#121215] shadow-2xl"><button type="button" onClick={(event) => { event.stopPropagation(); setYoutubePlayerUrl(null); }} className="absolute right-3 top-2 z-10 rounded-full bg-black/70 px-3 py-1 text-xl text-white" aria-label="დახურვა">×</button><div className="aspect-video"><iframe src={youtubePlayerUrl} title={activeRelease.title} className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen /></div></div></div>, document.body)}
+      {audioUrl && createPortal(<div className="fixed bottom-5 left-1/2 z-[80] flex -translate-x-1/2 items-center gap-3 rounded-xl border border-blue-400/30 bg-[#121215] p-3 shadow-2xl"><audio ref={audioRef} src={audioUrl} controls autoPlay className="h-8" /><button type="button" onClick={(event) => { event.stopPropagation(); setAudioUrl(null); }} className="text-lg text-gray-400 hover:text-white" aria-label="დახურვა">×</button></div>, document.body)}
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Breadcrumbs */}
         <nav className="mb-6 flex items-center gap-2 text-sm">
           <button
             onClick={onBack}
-            className="text-gray-500 transition-colors hover:text-cyan-400"
+            className="text-gray-500 transition-colors hover:text-blue-400"
           >
             {backToRelease ? 'ალბომში დაბრუნება' : 'მთავარი'}
           </button>
@@ -556,15 +552,15 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
           <div className="flex-1 min-w-0">
             {/* Badges */}
             <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-300">
+              <span className="stage-format-badge px-3 py-1">
                 {releaseTypeLabel(activeRelease)}
               </span>
               {activeRelease.season && (
-                <span className="rounded-full border border-violet-400/30 bg-violet-400/10 px-3 py-1 text-xs font-medium text-violet-300">
+                <span className="stage-season-badge px-3 py-1 text-xs font-medium">
                   {activeRelease.season}
                 </span>
               )}
-              {releaseAwards.map((award) => <span key={`${award.season_year}-${award.award_key}`} className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">{award.season_year} · {{ listeners_choice: 'მსმენელთა რჩეული', media_choice: 'მედიის რჩეული', release_of_year: 'წლის რელიზი', discovery_of_year: 'წლის აღმოჩენა' }[award.award_key] ?? 'ჯილდო'}</span>)}
+              {releaseAwards.map((award) => <span key={`${award.season_year}-${award.award_key}`} className="stage-award-badge px-3 py-1 text-xs font-semibold">{award.season_year} · {{ listeners_choice: 'მსმენელთა რჩეული', media_choice: 'მედიის რჩეული', release_of_year: 'წლის რელიზი', discovery_of_year: 'წლის აღმოჩენა' }[award.award_key] ?? 'ჯილდო'}</span>)}
             </div>
 
             {/* Title & artist */}
@@ -575,7 +571,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
 
             {/* Streaming button */}
             <div className="mt-4 flex items-center gap-3">
-              <button type="button" onClick={handleListen} className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 px-5 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-90">
+              <button type="button" onClick={handleListen} className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-blue-400 to-pink-500 px-5 py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-90">
                 <Play className="h-4 w-4" fill="currentColor" />
                 მოსმენა
               </button>
@@ -594,20 +590,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
             {/* Triple score pills */}
             <div className="mt-6">
               <p className="mb-2 text-xs font-medium uppercase tracking-wider text-gray-600">შეფასებები</p>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(boundCommunityScore))}`}>
-                  <span className="text-2xl font-extrabold leading-none">{boundCommunityScore}</span>
-                  <span className="text-[10px] font-medium text-gray-500">საზოგადოება</span>
-                </div>
-                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(boundCriticsScore))}`}>
-                  <span className="text-2xl font-extrabold leading-none">{boundCriticsScore}</span>
-                  <span className="text-[10px] font-medium text-gray-500">მედია</span>
-                </div>
-                <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(userPersonalReview?.totalScore))}`}>
-                  <span className="text-2xl font-extrabold leading-none">{userPersonalReview?.totalScore ?? '—'}</span>
-                  <span className="text-[10px] font-medium text-gray-500">პერსონალური</span>
-                </div>
-              </div>
+              <ScoreTriplet community={boundCommunityScore} media={boundCriticsScore} personal={userPersonalReview?.totalScore} large />
               <p className="mt-2 text-xs text-gray-500">ქულები პირად განცდას ასახავს; ჯგუფები მხოლოდ შეფასების ავტორს განასხვავებს.</p>
             </div>
 
@@ -627,9 +610,9 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
           </div>
         </div>
 
-        {isAlbumOrEp(activeRelease.release_type ?? activeRelease.type) && <section className="mb-8 rounded-2xl border border-cyan-400/20 bg-[#121215] p-5" aria-labelledby="tracklist-heading">
+        {isAlbumOrEp(activeRelease.release_type ?? activeRelease.type) && <section className="mb-8 rounded-2xl border border-blue-400/20 bg-[#121215] p-5" aria-labelledby="tracklist-heading">
           <h2 id="tracklist-heading" className="mb-4 text-lg font-bold text-white">ტრეკების სია</h2>
-          {childTracks.length === 0 ? <p className="text-sm text-gray-500">ამ ალბომში ტრეკები ჯერ არ არის.</p> : <ol className="divide-y divide-white/10">{childTracks.map((track, index) => <li key={String(track.id)} className="flex items-center gap-4 py-3"><span className="w-7 text-center text-sm font-bold text-cyan-300">{index + 1}</span><div className="min-w-0 flex-1"><button type="button" onClick={() => onOpenRelease(track)} className="block max-w-full truncate text-left text-sm font-semibold text-white transition-colors hover:text-cyan-300 focus-visible:text-cyan-300">{track.title}</button><p className="truncate text-xs text-gray-500">{track.artist}</p></div><button type="button" onClick={() => playTrack(track)} aria-label={`${track.title} — მოსმენა`} className="rounded-full border border-cyan-300/30 p-2 text-cyan-200 transition hover:bg-cyan-300/10"><Play className="h-4 w-4" fill="currentColor" /></button></li>)}</ol>}
+          {childTracks.length === 0 ? <p className="text-sm text-gray-500">ამ ალბომში ტრეკები ჯერ არ არის.</p> : <ol className="divide-y divide-white/10">{childTracks.map((track, index) => <li key={String(track.id)} className="flex items-center gap-4 py-3"><span className="w-7 text-center text-sm font-bold text-blue-300">{index + 1}</span><div className="min-w-0 flex-1"><button type="button" onClick={() => onOpenRelease(track)} className="block max-w-full truncate text-left text-sm font-semibold text-white transition-colors hover:text-blue-300 focus-visible:text-blue-300">{track.title}</button><p className="truncate text-xs text-gray-500">{track.artist}</p></div><button type="button" onClick={() => playTrack(track)} aria-label={`${track.title} — მოსმენა`} className="rounded-full border border-blue-300/30 p-2 text-blue-200 transition hover:bg-blue-300/10"><Play className="h-4 w-4" fill="currentColor" /></button></li>)}</ol>}
         </section>}
 
         {/* Divider */}
@@ -646,7 +629,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
             </div>
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-cyan-400 to-violet-500 px-5 py-2 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan shrink-0"
+              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-blue-400 to-pink-500 px-5 py-2 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan shrink-0"
             >
               <LogIn className="h-4 w-4" />
               შესვლა
@@ -656,12 +639,12 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
 
         {/* Authenticated user banner */}
         {isAuthenticated && user && (
-          <div className="mb-6 flex items-center gap-3 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-5 py-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-cyan-400/10">
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-blue-500/20 bg-blue-500/5 px-5 py-4">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-400/10">
               {user.isVerified ? (
                 <VerificationBadge />
               ) : (
-                <CheckCircle2 className="h-5 w-5 text-cyan-400" />
+                <CheckCircle2 className="h-5 w-5 text-blue-400" />
               )}
             </div>
             <div>
@@ -676,22 +659,22 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
         )}
 
         {/* Two-column layout: Evaluation + Review form */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <div className="stage-detail-grid grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
           {/* Left: Stage 90 Evaluation */}
-          <div className="space-y-5">
+          <div className="stage-detail-evaluation space-y-5">
             <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-6">
               <div className="mb-5 flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-cyan-400/10">
-                  <TrendingUp className="h-4 w-4 text-cyan-400" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-400/10">
+                  <TrendingUp className="h-4 w-4 text-blue-400" />
                 </span>
                 <h2 className="text-lg font-bold text-white">STAGE 90 შეფასების სისტემა</h2>
               </div>
 
               {/* Score display */}
               <div className="mb-6 flex flex-col items-center">
-                <div className="score-pulse relative flex h-32 w-32 items-center justify-center rounded-full border-2 border-cyan-400/30 bg-gradient-to-br from-cyan-400/10 to-violet-500/10">
+                <div className="relative flex h-32 w-32 items-center justify-center rounded-full border-2 border-slate-500/50 bg-slate-800/60">
                   <div className="text-center">
-                    <span className="block text-4xl font-extrabold text-cyan-300 text-glow-cyan leading-none">
+                    <span className="block text-4xl font-extrabold text-white leading-none">
                       {totalScore}
                     </span>
                     <span className="text-xs font-medium text-gray-500">/ 90</span>
@@ -710,7 +693,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                   <div key={param.id}>
                     <div className="mb-1.5 flex items-center justify-between">
                       <label htmlFor={`rzt-${param.id}`} className="text-sm text-gray-300">{param.label}</label>
-                      <span className="text-sm font-bold text-cyan-400">{params[index]}</span>
+                      <span className="text-sm font-bold text-blue-400">{params[index]}</span>
                     </div>
                     <p className="mb-1 text-xs text-gray-400">{param.question}</p>
                     <p className="mb-2 text-[11px] text-gray-600">{param.hint}</p>
@@ -737,7 +720,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
                   <label htmlFor="rzt-vibe" className="text-sm text-gray-300">ატმოსფერო</label>
-                  <span className="text-sm font-bold text-violet-400">
+                  <span className="text-sm font-bold text-pink-400">
                     {VIBE_LEVELS[vibeLevel - 1]}
                   </span>
                 </div>
@@ -758,14 +741,14 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                   {VIBE_LEVELS.map((level, i) => (
                     <span
                       key={level}
-                      className={vibeLevel === i + 1 ? 'font-bold text-violet-400' : ''}
+                      className={vibeLevel === i + 1 ? 'font-bold text-pink-400' : ''}
                     >
                       {i + 1}
                     </span>
                   ))}
                 </div>
                 <p className="mt-2 text-[11px] text-gray-500">
-                  კოეფიციენტი: <span className="font-mono text-violet-400">{VIBE_COEFFICIENTS[vibeLevel - 1].toFixed(4)}</span>
+                  კოეფიციენტი: <span className="font-mono text-pink-400">{VIBE_COEFFICIENTS[vibeLevel - 1].toFixed(4)}</span>
                 </p>
               </div>
 
@@ -773,23 +756,23 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
               <div className="mt-5 rounded-lg border border-[#1e1e24] bg-[#0a0a0c] p-3">
                 <p className="text-[11px] text-gray-500">
                   ფორმულა: ({params.join(' + ')}) × 1.4 × {VIBE_COEFFICIENTS[vibeLevel - 1].toFixed(4)} ={' '}
-                  <span className="font-bold text-cyan-400">{totalScore}</span>
+                  <span className="font-bold text-blue-400">{totalScore}</span>
                 </p>
               </div>
             </div>
           </div>
 
           {/* Right: Review form */}
-          <div className="space-y-5">
+          <div className="stage-detail-community flex flex-col gap-5">
             {/* Form tabs */}
-            <div className="grid grid-cols-2 gap-1 rounded-xl border border-[#1e1e24] bg-[#121215] p-1 sm:flex sm:items-center">
+            <div className="stage-detail-form-tabs grid grid-cols-2 gap-1 rounded-xl border border-[#1e1e24] bg-[#121215] p-1 sm:flex sm:items-center">
               {REVIEW_FORM_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setFormTab(tab.id)}
                   className={`min-w-0 rounded-lg px-3 py-2 text-sm font-semibold transition-colors sm:flex-1 ${tab.id === 'value' ? 'col-span-2' : ''} ${
                     formTab === tab.id
-                      ? 'bg-cyan-400/10 text-cyan-400'
+                      ? 'bg-blue-400/10 text-blue-400'
                       : 'text-gray-500 hover:text-gray-300'
                   }`}
                 >
@@ -798,17 +781,17 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
               ))}
             </div>
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-[200px_1fr]">
+            <div className="stage-detail-form-body grid grid-cols-1 gap-5 sm:grid-cols-[200px_1fr]">
               {/* Rules sidebar */}
               <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-4">
                 <div className="mb-3 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-violet-400" />
+                  <BookOpen className="h-4 w-4 text-pink-400" />
                   <h3 className="text-sm font-bold text-white">რეცენზიის წესები</h3>
                 </div>
                 <ul className="space-y-2.5">
                   {REVIEW_RULES.map((rule, i) => (
                     <li key={i} className="flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet-400/60" />
+                      <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-pink-400/60" />
                       <span className="text-xs leading-relaxed text-gray-400">{rule}</span>
                     </li>
                   ))}
@@ -817,7 +800,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
 
               {/* Form inputs */}
               <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-5">
-                {userPersonalReview && <div className="mb-4 rounded-lg border border-cyan-400/20 bg-cyan-400/5 px-3 py-2 text-xs text-cyan-200">თქვენ უკვე შეაფასეთ ეს რელიზი — ხელახლა გაგზავნა შეცვლის არსებულ შეფასებას.</div>}
+                {userPersonalReview && <div className="mb-4 rounded-lg border border-blue-400/20 bg-blue-400/5 px-3 py-2 text-xs text-blue-200">თქვენ უკვე შეაფასეთ ეს რელიზი — ხელახლა გაგზავნა შეცვლის არსებულ შეფასებას.</div>}
                 {formTab === 'review' && (
                   <div className="space-y-4">
                     {/* Title input */}
@@ -831,7 +814,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                         onChange={(e) => setReviewTitle(e.target.value)}
                         disabled={!isAuthenticated}
                         placeholder={isAuthenticated ? 'შეიყვანეთ სათაური...' : 'ავტორიზაცია საჭიროა'}
-                        className="w-full rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 transition-colors focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="w-full rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-2.5 text-sm text-gray-200 placeholder-gray-600 transition-colors focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                     </div>
 
@@ -848,7 +831,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                         disabled={!isAuthenticated}
                         placeholder={isAuthenticated ? 'რა იგრძენი მოსმენისას? რა ემოციები, სახეები ან მოგონებები დაგრჩა?' : 'ავტორიზაცია საჭიროა'}
                         rows={8}
-                        className="w-full resize-none rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-3 text-sm leading-relaxed text-gray-200 placeholder-gray-600 transition-colors focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="w-full resize-none rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-3 text-sm leading-relaxed text-gray-200 placeholder-gray-600 transition-colors focus:border-blue-500/50 focus:outline-none focus:ring-1 focus:ring-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                       {/* Character counter */}
                       <div className="mt-2 flex items-center justify-between text-xs">
@@ -893,12 +876,12 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
 
                 {formTab === 'rating-only' && (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <Star className="mb-3 h-10 w-10 text-cyan-400/40" />
+                    <Star className="mb-3 h-10 w-10 text-blue-400/40" />
                     <p className="text-sm text-gray-400">
                       შეაფასე, როგორ განიცადე რელიზი, რეცენზიის წერის გარეშე.
                     </p>
                     <p className="mt-1 text-xs text-gray-600">
-                      თქვენი ქულა: <span className="font-bold text-cyan-400">{totalScore} / 90</span>
+                      თქვენი ქულა: <span className="font-bold text-blue-400">{totalScore} / 90</span>
                     </p>
                   </div>
                 )}
@@ -911,7 +894,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                       <span className="text-2xl font-extrabold">{personalTier}</span>
                     </div>
                     <p className="mt-3 text-xs text-gray-600">
-                      თქვენი შეფასების ქულა: <span className="font-bold text-cyan-400">{totalScore} / 90</span>
+                      თქვენი შეფასების ქულა: <span className="font-bold text-blue-400">{totalScore} / 90</span>
                     </p>
                   </div>
                 )}
@@ -930,7 +913,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                     disabled={!canSubmit || isSubmitting}
                     className={`flex items-center justify-center gap-1.5 rounded-lg px-6 py-2 text-sm font-bold transition-all ${
                       canSubmit
-                        ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-black glow-cyan hover:opacity-90'
+                        ? 'bg-gradient-to-r from-blue-400 to-pink-500 text-black glow-cyan hover:opacity-90'
                         : 'cursor-not-allowed border border-[#1e1e24] bg-[#121215] text-gray-600'
                     }`}
                   >
@@ -945,10 +928,10 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
             </div>
 
             {/* Existing reviews preview */}
-            <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-5">
+            <div className="stage-detail-reviews order-first rounded-xl border border-[#1e1e24] bg-[#121215] p-5 lg:order-last">
               <div className="mb-4 flex items-center gap-2.5">
-                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-400/10">
-                  <MessageSquare className="h-4 w-4 text-violet-400" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-pink-400/10">
+                  <MessageSquare className="h-4 w-4 text-pink-400" />
                 </span>
                 <h3 className="text-sm font-bold text-white">შეფასებები და რეცენზიები</h3>
               </div>
@@ -971,15 +954,13 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                           <span className="truncate">{review.username}</span>
                           <RoleBadge role={review.role} category={review.authorCategory} isVerified={review.isVerified} />
                         </span>
-                        <span className="text-sm font-extrabold text-cyan-400">
-                          {review.totalScore}
-                        </span>
+                        <span className="stage-review-score text-sm font-extrabold">{review.totalScore}<small>/90</small></span>
                       </div>
                       <p className="mt-1 break-words break-all overflow-hidden text-xs font-semibold text-gray-300 line-clamp-1">{review.title}</p>
                       <p className="mt-1 text-[10px] text-gray-500">{review.scoringModel === 'experience_v1' ? 'პირადი განცდის შეფასება' : 'ადრინდელი ან ვერსიადაუზუსტებელი შეფასება'}</p>
                       {review.body && <p className="mt-1 break-words break-all overflow-hidden whitespace-pre-wrap text-xs leading-relaxed text-gray-500 line-clamp-2">{review.body}</p>}
-                      <button type="button" onClick={() => onOpenReview(String(review.id))} className="mt-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">{review.body ? 'სრული რეცენზიის ნახვა →' : 'შეფასების ნახვა →'}</button>
-                      {(user?.role === 'author' || user?.role === 'admin') && <button type="button" onClick={() => void toggleAuthorLike(String(review.id))} disabled={authorLikePendingId !== null} aria-pressed={authorLikedReviewIds.has(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold disabled:cursor-wait disabled:opacity-60 ${authorLikedReviewIds.has(String(review.id)) ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-200' : 'border-[#2a2a32] text-gray-400 hover:text-cyan-200'}`}>ავტორული მოწონება · {review.authorLikes}</button>}
+                      <button type="button" onClick={() => onOpenReview(String(review.id))} className="mt-2 text-xs font-semibold text-blue-300 hover:text-blue-200">{review.body ? 'სრული რეცენზიის ნახვა →' : 'შეფასების ნახვა →'}</button>
+                      {(user?.role === 'author' || user?.role === 'admin') && <button type="button" onClick={() => void toggleAuthorLike(String(review.id))} disabled={authorLikePendingId !== null} aria-pressed={authorLikedReviewIds.has(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold disabled:cursor-wait disabled:opacity-60 ${authorLikedReviewIds.has(String(review.id)) ? 'border-blue-300/40 bg-blue-300/10 text-blue-200' : 'border-[#2a2a32] text-gray-400 hover:text-blue-200'}`}>ავტორული მოწონება · {review.authorLikes}</button>}
                       <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-600">
                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{review.createdAt ? new Date(review.createdAt).toLocaleDateString('ka-GE') : 'ახლახან'}</span>
                         <span className="flex items-center gap-1"><Sparkles className="h-3 w-3" />{review.body ? 'STAGE 90 რეცენზია' : 'STAGE 90 შეფასება'}</span>
@@ -989,7 +970,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 ))}
                 {authorLikeError && <p role="alert" className="text-xs text-rose-300">{authorLikeError}</p>}
               </div>
-              {(user?.role === 'author' || user?.role === 'admin') && <div className="mt-4 border-t border-[#1e1e24] pt-4"><label htmlFor="author-review-comment" className="mb-2 block text-xs font-semibold text-cyan-200">ავტორული კომენტარი</label><div className="flex gap-2"><input id="author-review-comment" value={authorCommentText} onChange={(event) => setAuthorCommentText(event.target.value)} placeholder="დატოვეთ კომენტარი რელიზზე" className="min-w-0 flex-1 rounded-lg border border-[#2a2a32] bg-[#0a0a0c] px-3 py-2 text-xs text-white placeholder-gray-500" /><button onClick={() => void submitAuthorComment()} disabled={!authorCommentText.trim()} className="rounded-lg bg-cyan-400/15 px-3 py-2 text-xs font-semibold text-cyan-200 disabled:opacity-40">გამოქვეყნება</button></div>{authorCommentMessage && <p className="mt-2 text-xs text-gray-400">{authorCommentMessage}</p>}</div>}
+              {(user?.role === 'author' || user?.role === 'admin') && <div className="mt-4 border-t border-[#1e1e24] pt-4"><label htmlFor="author-review-comment" className="mb-2 block text-xs font-semibold text-blue-200">ავტორული კომენტარი</label><div className="flex gap-2"><input id="author-review-comment" value={authorCommentText} onChange={(event) => setAuthorCommentText(event.target.value)} placeholder="დატოვეთ კომენტარი რელიზზე" className="min-w-0 flex-1 rounded-lg border border-[#2a2a32] bg-[#0a0a0c] px-3 py-2 text-xs text-white placeholder-gray-500" /><button onClick={() => void submitAuthorComment()} disabled={!authorCommentText.trim()} className="rounded-lg bg-blue-400/15 px-3 py-2 text-xs font-semibold text-blue-200 disabled:opacity-40">გამოქვეყნება</button></div>{authorCommentMessage && <p className="mt-2 text-xs text-gray-400">{authorCommentMessage}</p>}</div>}
             </div>
           </div>
         </div>
