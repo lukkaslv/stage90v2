@@ -760,12 +760,12 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
           {/* Right: Review form */}
           <div className="space-y-5">
             {/* Form tabs */}
-            <div className="flex items-center gap-1 rounded-xl border border-[#1e1e24] bg-[#121215] p-1">
+            <div className="grid grid-cols-2 gap-1 rounded-xl border border-[#1e1e24] bg-[#121215] p-1 sm:flex sm:items-center">
               {REVIEW_FORM_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setFormTab(tab.id)}
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold transition-colors ${
+                  className={`min-w-0 rounded-lg px-3 py-2 text-sm font-semibold transition-colors sm:flex-1 ${tab.id === 'value' ? 'col-span-2' : ''} ${
                     formTab === tab.id
                       ? 'bg-cyan-400/10 text-cyan-400'
                       : 'text-gray-500 hover:text-gray-300'
@@ -895,10 +895,10 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 )}
 
                 {/* Action buttons */}
-                <div className="mt-5 flex items-center justify-between gap-3 border-t border-[#1e1e24] pt-4">
+                <div className="mt-5 flex flex-col gap-3 border-t border-[#1e1e24] pt-4 sm:flex-row sm:items-center sm:justify-between">
                   <button
                     onClick={handleClear}
-                    className="flex items-center gap-1.5 rounded-lg border border-[#2a2a32] px-4 py-2 text-sm font-medium text-gray-400 transition-colors hover:border-gray-600 hover:text-gray-300"
+                    className="flex items-center justify-center gap-1.5 rounded-lg border border-[#2a2a32] px-4 py-2 text-sm font-medium text-gray-400 transition-colors hover:border-gray-600 hover:text-gray-300"
                   >
                     <Eraser className="h-4 w-4" />
                     მონახაზის გასუფთავება
@@ -906,7 +906,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                   <button
                     onClick={handleSubmit}
                     disabled={!canSubmit || isSubmitting}
-                    className={`flex items-center gap-1.5 rounded-lg px-6 py-2 text-sm font-bold transition-all ${
+                    className={`flex items-center justify-center gap-1.5 rounded-lg px-6 py-2 text-sm font-bold transition-all ${
                       canSubmit
                         ? 'bg-gradient-to-r from-cyan-400 to-violet-500 text-black glow-cyan hover:opacity-90'
                         : 'cursor-not-allowed border border-[#1e1e24] bg-[#121215] text-gray-600'

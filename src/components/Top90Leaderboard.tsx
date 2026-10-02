@@ -54,7 +54,7 @@ function PodiumCard({ user, position }: { user: LeaderboardUser; position: 'cent
   const rankColor = user.rank === 1 ? 'text-rose-400' : user.rank === 2 ? 'text-emerald-400' : 'text-amber-400';
 
   return (
-    <div className={`flex flex-col items-center ${heightClass} ${scaleClass}`}>
+    <div className={`flex min-w-0 flex-1 flex-col items-center ${heightClass} ${scaleClass}`}>
       {/* Rank badge */}
       <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-full border-2 bg-[#121215] ${rankColor} ${
         user.rank === 1 ? 'border-rose-500/50' : user.rank === 2 ? 'border-emerald-500/50' : 'border-amber-500/50'
@@ -64,7 +64,7 @@ function PodiumCard({ user, position }: { user: LeaderboardUser; position: 'cent
 
       {/* Avatar with badge overlay */}
       <div className="relative">
-        <div className={`flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-[#1e1e24] ring-2 ${badge.ring} ${badge.glow} sm:h-24 sm:w-24`}>
+        <div className={`flex h-16 w-16 items-center justify-center overflow-hidden rounded-full bg-[#1e1e24] ring-2 ${badge.ring} ${badge.glow} sm:h-24 sm:w-24`}>
           {user.avatarUrl ? <img src={user.avatarUrl} alt={user.username} className="h-full w-full object-cover" /> : <span className="text-lg font-bold text-gray-400">{user.username.slice(0, 2).toUpperCase()}</span>}
         </div>
         {/* Seasonal badge overlay */}
@@ -74,7 +74,7 @@ function PodiumCard({ user, position }: { user: LeaderboardUser; position: 'cent
       </div>
 
       {/* Username */}
-      <p className="mt-3 max-w-[120px] truncate text-sm font-bold text-white text-center">{user.username}</p>
+      <p className="mt-3 w-full truncate text-center text-sm font-bold text-white">{user.username}</p>
 
       {/* Points */}
       <div className="mt-1.5 flex items-center gap-1.5">
@@ -206,9 +206,9 @@ export default function Top90Leaderboard() {
         {/* Left: Leaderboard */}
         <div className="space-y-6">
           {/* Podium */}
-          <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-6 sm:p-8">
+          <div className="rounded-xl border border-[#1e1e24] bg-[#121215] p-4 sm:p-8">
             {podiumUsers.length > 0 ? (
-              <div className="flex items-end justify-center gap-4 sm:gap-8">
+              <div className="flex items-end justify-center gap-2 sm:gap-8">
                 {podiumUsers[1] && <PodiumCard user={podiumUsers[1]} position="left" />}
                 <PodiumCard user={podiumUsers[0]} position="center" />
                 {podiumUsers[2] && <PodiumCard user={podiumUsers[2]} position="right" />}
