@@ -529,9 +529,6 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                   {activeRelease.season}
                 </span>
               )}
-              <span className="rounded-full border border-[#2a2a32] px-3 py-1 text-xs font-medium text-gray-400">
-                {activeRelease.year} · {activeRelease.genre}
-              </span>
             </div>
 
             {/* Title & artist */}
@@ -578,11 +575,11 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
             </div>
 
             {/* Value tier banner */}
-            <div className={`mt-5 flex items-center gap-3 rounded-xl px-5 py-3 ${releaseTierConfig?.badge ?? 'border border-zinc-700/50 bg-zinc-900/30 text-zinc-400'}`}>
-              <Gem className={`h-5 w-5 ${releaseTierConfig?.icon ?? 'text-zinc-500'}`} />
+            <div className={`mt-5 inline-flex max-w-full items-center gap-2 rounded-lg px-3 py-2 ${releaseTierConfig?.badge ?? 'border border-zinc-700/50 bg-zinc-900/30 text-zinc-400'}`}>
+              <Gem className={`h-4 w-4 shrink-0 ${releaseTierConfig?.icon ?? 'text-zinc-500'}`} />
               <div>
-                <p className="text-xs text-gray-400">{valueTierHeading(activeRelease.release_type ?? activeRelease.type)}</p>
-                <p className="text-lg font-extrabold">{boundReleaseTier ?? 'ჯერ არ შეფასებულა'}</p>
+                <p className="text-[10px] leading-tight text-gray-400">{valueTierHeading(activeRelease.release_type ?? activeRelease.type)}</p>
+                <p className="text-sm font-bold leading-tight">{boundReleaseTier ?? 'ჯერ არ შეფასებულა'}</p>
               </div>
             </div>
           </div>
