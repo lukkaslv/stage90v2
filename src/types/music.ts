@@ -47,13 +47,13 @@ export type ValueTier = 'ვერცხლი' | 'ოქრო' | 'ზურმ
 
 export const VIBE_COEFFICIENTS = [1.0, 1.1518, 1.3036, 1.4554, 1.6072] as const;
 
-export const VIBE_LEVELS = ['ჩაძირული', 'მშვიდი', 'ნეიტრალური', 'ამაღლებული', 'ტრანსცენდენტული'] as const;
+export const VIBE_LEVELS = ['სუსტი', 'შესამჩნევი', 'გამოკვეთილი', 'ძლიერი', 'განსაკუთრებით ძლიერი'] as const;
 
 export const RZT_PARAMS = [
-  { id: 'rhymes', label: 'რითმები / სახეები' },
-  { id: 'structure', label: 'სტრუქტურა / რიტმიკა' },
-  { id: 'style', label: 'სტილის რეალიზაცია' },
-  { id: 'individuality', label: 'ინდივიდუალობა / ქარიზმა' },
+  { id: 'response', storageKey: 'rhymes', label: 'გამოძახილი', question: 'რამდენად ძლიერ რეაქციას იწვევს ეს მუსიკა შენში?', hint: 'გრძნობა, ინტერესი ან შინაგანი გამოძახილი' },
+  { id: 'engagement', storageKey: 'structure', label: 'ჩართულობა', question: 'რამდენად ერთვები ამ მუსიკის განცდაში?', hint: 'პირადი კავშირი და ემოციური მონაწილეობა' },
+  { id: 'immersion', storageKey: 'style', label: 'ჩაძირვა', question: 'რამდენად იძირები მუსიკალურ სამყაროში?', hint: 'ყურადღების სრულად მიპყრობა' },
+  { id: 'transformation', storageKey: 'individuality', label: 'გარდაქმნა', question: 'რამდენად ცვლის მუსიკა შენს შინაგან მდგომარეობას?', hint: 'განწყობის ან საკუთარი თავის აღქმის ცვლილება' },
 ] as const;
 
 export const VALUE_TIER_CONFIG: Record<ValueTier, { color: string; glow: string; gradient: string }> = {
@@ -85,7 +85,7 @@ export interface Review {
   releaseTitle: string;
   artist: string;
   coverUrl: string;
-  ratings: { production: number; lyrics: number; originality: number; replay: number };
+  ratings: { production: number; lyrics: number; originality: number; replay: number } | { response: number; engagement: number; immersion: number; transformation: number };
   totalScore: number;
   excerpt: string;
   date: string;

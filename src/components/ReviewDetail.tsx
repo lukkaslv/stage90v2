@@ -13,7 +13,7 @@ export default function ReviewDetail({ id, onReleaseClick, onBack }: Props) {
     const client = supabase;
     if (!client) { setLoading(false); return; }
     let cancelled = false;
-    void client.from('reviews').select('id, release_id, title, content, total_score, created_at, profiles:user_id(display_name, role, author_category, is_verified), releases:release_id(title, artist_name, cover_url)')
+    void client.from('reviews').select('*, profiles:user_id(display_name, role, author_category, is_verified), releases:release_id(title, artist_name, cover_url)')
       .eq('id', id).maybeSingle().then(({ data }) => {
         if (!cancelled) { setReview(data as Row | null); setLoading(false); }
       });
@@ -30,6 +30,7 @@ export default function ReviewDetail({ id, onReleaseClick, onBack }: Props) {
         <span className="ml-auto text-xl font-bold text-cyan-300">{Number(review.total_score ?? 0)}</span>
       </div>
       <h1 className="mb-5 text-2xl font-bold text-white">{String(review.title ?? 'რეცენზია')}</h1>
+      <p className="mb-4 text-xs text-gray-500">{review.scoring_model === 'experience_v1' ? 'პირადი განცდის შეფასება' : 'ადრინდელი ან ვერსიადაუზუსტებელი შეფასება'}</p>
       {Boolean(review.content) && <p className="whitespace-pre-wrap break-words leading-7 text-gray-300">{String(review.content)}</p>}
       {review.release_id != null && <button type="button" onClick={() => onReleaseClick(String(review.release_id))} className="mt-8 flex items-center gap-3 border-t border-white/10 pt-5 text-left text-cyan-300">
         {Boolean(release?.cover_url) && <img src={String(release?.cover_url)} alt="" className="h-12 w-12 rounded-md object-cover" />}

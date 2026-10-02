@@ -78,6 +78,7 @@ interface StoredReview {
   title: string;
   body: string;
   totalScore: number;
+  scoringModel: string | null;
   createdAt: string;
   username: string;
   role: string;
@@ -275,6 +276,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
         title: String(item.title ?? 'რეცენზია'),
         body: String(item.content ?? item.body ?? item.text ?? item.review_text ?? item.excerpt ?? ''),
         totalScore: Number(item.total_score ?? 0),
+        scoringModel: typeof item.scoring_model === 'string' ? item.scoring_model : null,
         createdAt: String(item.created_at ?? ''),
         username: String(profile?.display_name ?? item.user_display_name ?? item.username ?? item.display_name ?? metadata?.display_name ?? (isCurrentUser ? user?.displayName : undefined) ?? 'მომხმარებელი'),
         role: String(profile?.role ?? 'user'),
@@ -408,6 +410,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
       style: params[2],
       individuality: params[3],
       vibe: vibeLevel,
+      scoring_model: 'experience_v1',
       total_score: totalScore,
       media_url: formTab === 'review' ? (isMediaUser && mediaUrl.trim() ? mediaUrl.trim() : null) : existingReview?.mediaUrl ?? null,
       preview_image_url: formTab === 'review' ? (isMediaUser && previewImageUrl.trim() ? previewImageUrl.trim() : null) : existingReview?.previewImageUrl ?? null,
@@ -422,9 +425,16 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
       const basePayload: Record<string, unknown> = { ...reviewPayload };
       delete basePayload.user_display_name;
       delete basePayload.author_name;
+      if (/scoring_model/i.test(error.message)) delete basePayload.scoring_model;
       ({ error } = existingReview
         ? await supabase.from('reviews').update(basePayload).eq('id', existingReview.id)
         : await supabase.from('reviews').insert(basePayload));
+      if (error && /scoring_model/i.test(error.message)) {
+        delete basePayload.scoring_model;
+        ({ error } = existingReview
+          ? await supabase.from('reviews').update(basePayload).eq('id', existingReview.id)
+          : await supabase.from('reviews').insert(basePayload));
+      }
     }
     if (error) {
       setIsSubmitting(false);
@@ -586,13 +596,14 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 </div>
                 <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(boundCriticsScore))}`}>
                   <span className="text-2xl font-extrabold leading-none">{boundCriticsScore}</span>
-                  <span className="text-[10px] font-medium text-gray-500">კრიტიკოსები</span>
+                  <span className="text-[10px] font-medium text-gray-500">მედია</span>
                 </div>
                 <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 ${scoreColor(Number(userPersonalReview?.totalScore))}`}>
                   <span className="text-2xl font-extrabold leading-none">{userPersonalReview?.totalScore ?? '—'}</span>
                   <span className="text-[10px] font-medium text-gray-500">პერსონალური</span>
                 </div>
               </div>
+              <p className="mt-2 text-xs text-gray-500">ქულები პირად განცდას ასახავს; ჯგუფები მხოლოდ შეფასების ავტორს განასხვავებს.</p>
             </div>
 
             {/* Value tier banner */}
@@ -684,14 +695,17 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
 
               {/* Base parameters */}
               <div className="space-y-4">
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-600">ფუძე პარამეტრები (1-10)</p>
+                <p className="text-xs font-medium tracking-wider text-gray-500">როგორ განიცდი ამ მუსიკას? შეაფასე თითოეული განცდა ცალ-ცალკე (1–10).</p>
                 {RZT_PARAMS.map((param, index) => (
                   <div key={param.id}>
                     <div className="mb-1.5 flex items-center justify-between">
-                      <label className="text-sm text-gray-300">{param.label}</label>
+                      <label htmlFor={`rzt-${param.id}`} className="text-sm text-gray-300">{param.label}</label>
                       <span className="text-sm font-bold text-cyan-400">{params[index]}</span>
                     </div>
+                    <p className="mb-1 text-xs text-gray-400">{param.question}</p>
+                    <p className="mb-2 text-[11px] text-gray-600">{param.hint}</p>
                     <input
+                      id={`rzt-${param.id}`}
                       type="range"
                       min={1}
                       max={10}
@@ -712,12 +726,14 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
               {/* Vibe parameter */}
               <div>
                 <div className="mb-1.5 flex items-center justify-between">
-                  <label className="text-sm text-gray-300">ატმოსფერო / ვაიბი</label>
+                  <label htmlFor="rzt-vibe" className="text-sm text-gray-300">ატმოსფერო</label>
                   <span className="text-sm font-bold text-violet-400">
                     {VIBE_LEVELS[vibeLevel - 1]}
                   </span>
                 </div>
+                <p className="mb-2 text-xs text-gray-400">რამდენად მთლიან, გამომსახველ და ძლიერ სამყაროს ქმნის მუსიკა შენთვის?</p>
                 <input
+                  id="rzt-vibe"
                   type="range"
                   min={1}
                   max={5}
@@ -820,7 +836,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                         minLength={charMin}
                         maxLength={charMax}
                         disabled={!isAuthenticated}
-                        placeholder={isAuthenticated ? 'დაწერეთ თქვენი რეცენზია აქ...' : 'ავტორიზაცია საჭიროა'}
+                        placeholder={isAuthenticated ? 'რა იგრძენი მოსმენისას? რა ემოციები, სახეები ან მოგონებები დაგრჩა?' : 'ავტორიზაცია საჭიროა'}
                         rows={8}
                         className="w-full resize-none rounded-lg border border-[#1e1e24] bg-[#0a0a0c] px-4 py-3 text-sm leading-relaxed text-gray-200 placeholder-gray-600 transition-colors focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30 disabled:opacity-40 disabled:cursor-not-allowed"
                       />
@@ -869,7 +885,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Star className="mb-3 h-10 w-10 text-cyan-400/40" />
                     <p className="text-sm text-gray-400">
-                      შეაფასეთ რელიზი STAGE 90 სისტემით რეცენზიის წერის გარეშე.
+                      შეაფასე, როგორ განიცადე რელიზი, რეცენზიის წერის გარეშე.
                     </p>
                     <p className="mt-1 text-xs text-gray-600">
                       თქვენი ქულა: <span className="font-bold text-cyan-400">{totalScore} / 90</span>
@@ -950,6 +966,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                         </span>
                       </div>
                       <p className="mt-1 break-words break-all overflow-hidden text-xs font-semibold text-gray-300 line-clamp-1">{review.title}</p>
+                      <p className="mt-1 text-[10px] text-gray-500">{review.scoringModel === 'experience_v1' ? 'პირადი განცდის შეფასება' : 'ადრინდელი ან ვერსიადაუზუსტებელი შეფასება'}</p>
                       {review.body && <p className="mt-1 break-words break-all overflow-hidden whitespace-pre-wrap text-xs leading-relaxed text-gray-500 line-clamp-2">{review.body}</p>}
                       <button type="button" onClick={() => onOpenReview(String(review.id))} className="mt-2 text-xs font-semibold text-cyan-300 hover:text-cyan-200">{review.body ? 'სრული რეცენზიის ნახვა →' : 'შეფასების ნახვა →'}</button>
                       {(user?.role === 'author' || user?.role === 'admin') && <button type="button" onClick={() => void toggleAuthorLike(String(review.id))} disabled={authorLikePendingId !== null} aria-pressed={authorLikedReviewIds.has(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold disabled:cursor-wait disabled:opacity-60 ${authorLikedReviewIds.has(String(review.id)) ? 'border-cyan-300/40 bg-cyan-300/10 text-cyan-200' : 'border-[#2a2a32] text-gray-400 hover:text-cyan-200'}`}>ავტორული მოწონება · {review.authorLikes}</button>}

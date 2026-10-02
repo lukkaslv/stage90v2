@@ -1,17 +1,17 @@
 import { Quote } from 'lucide-react';
-import type { Review } from '@/types/music';
+import { RZT_PARAMS, type Review } from '@/types/music';
 import RoleBadge from '@/components/RoleBadge';
 
-function RatingBar({ label, value }: { label: string; value: number }) {
+function RatingBar({ label, value, max = 100 }: { label: string; value: number; max?: number }) {
   return (
     <div className="flex items-center gap-2">
       <span className="w-20 shrink-0 text-[11px] text-gray-500">{label}</span>
       <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#1e1e24]">
         <div
           className={`h-full rounded-full transition-all ${
-            value >= 90 ? 'bg-cyan-400' : value >= 80 ? 'bg-violet-400' : 'bg-gray-500'
+            value / max >= 0.9 ? 'bg-cyan-400' : value / max >= 0.8 ? 'bg-violet-400' : 'bg-gray-500'
           }`}
-          style={{ width: `${value}%` }}
+          style={{ width: `${(value / max) * 100}%` }}
         />
       </div>
       <span className="w-7 shrink-0 text-right text-[11px] font-bold text-gray-300">{value}</span>
@@ -20,6 +20,8 @@ function RatingBar({ label, value }: { label: string; value: number }) {
 }
 
 export default function ReviewCard({ review }: { review: Review }) {
+  const experienceRatings = 'response' in review.ratings ? review.ratings : null;
+  const legacyRatings = 'production' in review.ratings ? review.ratings : null;
   return (
     <article className="card-hover min-w-0 max-w-full overflow-hidden rounded-xl border border-[#1e1e24] bg-[#121215] p-5">
       {/* Header */}
@@ -54,10 +56,19 @@ export default function ReviewCard({ review }: { review: Review }) {
 
       {/* Rating breakdown */}
       <div className="mt-4 space-y-2">
-        <RatingBar label="პროდუქცია" value={review.ratings.production} />
-        <RatingBar label="ტექსტი" value={review.ratings.lyrics} />
-        <RatingBar label="ორიგინალობა" value={review.ratings.originality} />
-        <RatingBar label="გამეორება" value={review.ratings.replay} />
+        {experienceRatings ? (
+          [experienceRatings.response, experienceRatings.engagement, experienceRatings.immersion, experienceRatings.transformation].map((value, index) => (
+            <RatingBar key={RZT_PARAMS[index].id} label={RZT_PARAMS[index].label} value={value} max={10} />
+          ))
+        ) : legacyRatings && (
+          <>
+            <p className="text-[11px] text-gray-500">ძველი ტექნიკური შეფასება</p>
+            <RatingBar label="პროდუქცია" value={legacyRatings.production} />
+            <RatingBar label="ტექსტი" value={legacyRatings.lyrics} />
+            <RatingBar label="ორიგინალობა" value={legacyRatings.originality} />
+            <RatingBar label="გამეორება" value={legacyRatings.replay} />
+          </>
+        )}
       </div>
 
       {/* Excerpt */}
