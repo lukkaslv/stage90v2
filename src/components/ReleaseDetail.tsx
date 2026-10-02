@@ -46,14 +46,6 @@ interface ReleaseDetailProps {
 
 type FormTab = (typeof REVIEW_FORM_TABS)[number]['id'];
 
-function valueTierHeading(releaseType?: string): string {
-  const normalized = String(releaseType ?? '').trim().toLowerCase();
-  if (normalized === 'single' || normalized === 'track' || normalized === 'სინგლი') return 'სინგლის ღირებულება';
-  if (normalized === 'ep') return 'EP-ის ღირებულება';
-  if (normalized === 'album' || normalized === 'ალბომი') return 'ალბომის ღირებულება';
-  return 'რელიზის ღირებულება';
-}
-
 function isAlbumOrEp(releaseType?: string): boolean {
   const normalized = String(releaseType ?? '').trim().toLowerCase();
   return normalized === 'album' || normalized === 'ალბომი' || normalized === 'ep';
@@ -150,6 +142,17 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
   const audioRef = useRef<HTMLAudioElement>(null);
   const [loadedRelease, setLoadedRelease] = useState<Release | null>(() => fallbackRelease(release));
   const [childTracks, setChildTracks] = useState<Release[]>([]);
+  const [releaseAwards, setReleaseAwards] = useState<{ season_year: number; award_key: string }[]>([]);
+
+  useEffect(() => {
+    const client = supabase;
+    const id = typeof release === 'string' ? release : release?.id;
+    if (!client || !id) { setReleaseAwards([]); return; }
+    let cancelled = false;
+    void client.from('annual_release_awards').select('season_year, award_key').eq('release_id', id)
+      .then(({ data }) => { if (!cancelled) setReleaseAwards((data ?? []) as { season_year: number; award_key: string }[]); });
+    return () => { cancelled = true; };
+  }, [release]);
 
   useEffect(() => {
     if (release && typeof release !== 'string') setLoadedRelease(release);
@@ -561,6 +564,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                   {activeRelease.season}
                 </span>
               )}
+              {releaseAwards.map((award) => <span key={`${award.season_year}-${award.award_key}`} className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">{award.season_year} · {{ listeners_choice: 'მსმენელთა რჩეული', media_choice: 'მედიის რჩეული', release_of_year: 'წლის რელიზი', discovery_of_year: 'წლის აღმოჩენა' }[award.award_key] ?? 'ჯილდო'}</span>)}
             </div>
 
             {/* Title & artist */}
@@ -607,12 +611,17 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
               <p className="mt-2 text-xs text-gray-500">ქულები პირად განცდას ასახავს; ჯგუფები მხოლოდ შეფასების ავტორს განასხვავებს.</p>
             </div>
 
-            {/* Value tier banner */}
-            <div className={`mt-5 inline-flex max-w-full items-center gap-2 rounded-lg px-3 py-2 ${releaseTierConfig?.badge ?? 'border border-zinc-700/50 bg-zinc-900/30 text-zinc-400'}`}>
-              <Gem className={`h-4 w-4 shrink-0 ${releaseTierConfig?.icon ?? 'text-zinc-500'}`} />
-              <div>
-                <p className="text-[10px] leading-tight text-gray-400">{valueTierHeading(activeRelease.release_type ?? activeRelease.type)}{boundReleaseTier ? ` · საერთო ქულა ${activeRelease.overall_score}/90` : ''}</p>
-                <p className="text-sm font-bold leading-tight">{boundReleaseTier ?? 'ჯერ არ შეფასებულა'}</p>
+            {/* Overall score and value tier */}
+            <div className={`mt-5 w-full max-w-[350px] rounded-xl ${releaseTierConfig?.badge ?? 'border border-zinc-700/50 text-zinc-400'}`}>
+              <div className="flex items-center gap-3 rounded-[11px] bg-[#101013] px-4 py-3">
+                <Gem className={`h-5 w-5 shrink-0 ${releaseTierConfig?.icon ?? 'text-zinc-500'}`} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-lg font-extrabold leading-tight">{boundReleaseTier ?? 'ჯერ არ შეფასებულა'}</p>
+                  <p className="mt-0.5 text-[11px] leading-tight text-gray-400">{boundReleaseTier ? 'ყველა რეცენზიის საშუალო' : 'რეცენზიები ჯერ არ არის'}</p>
+                </div>
+                {boundReleaseTier && <span className="shrink-0 text-xl font-bold tabular-nums text-white" aria-label={`საერთო ქულა ${activeRelease.overall_score} 90-დან`}>
+                  {activeRelease.overall_score}<span className="ml-0.5 text-xs font-medium text-gray-500">/90</span>
+                </span>}
               </div>
             </div>
           </div>
