@@ -32,7 +32,7 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
       });
     }
     if (section === 'author-picks') {
-      return client.from('review_author_likes').select('id, created_at, profiles:author_id!inner(display_name, role, author_category, is_verified), reviews:review_id!inner(release_id, releases:release_id!inner(id, title, artist_name, cover_url, release_type))')
+      return client.from('review_author_likes').select('id, created_at, profiles:author_id!inner(display_name, role, author_category, is_verified), reviews:review_id!inner(id, title, content, release_id, releases:release_id!inner(id, title, artist_name, cover_url, release_type))')
         .order('created_at', { ascending: false }).order('id', { ascending: false })
         .range(from, to).returns<Record<string, unknown>[]>();
     }
@@ -64,7 +64,7 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
         const likedReview = section === 'author-picks' ? joined(row.reviews) : undefined;
         const release = likedReview ? joined(likedReview.releases) : joined(row.releases);
         const profile = joined(row.profiles);
-        const title = section === 'author-picks' ? String(release?.title ?? '') :
+        const title = section === 'author-picks' ? String(likedReview?.title ?? 'რეცენზია') :
           section === 'author-comments' ? String(row.comment_text ?? '') :
             String(row.title ?? row.content ?? 'რეცენზია');
         const author = String(row.author_name ?? row.username ?? profile?.display_name ?? 'ავტორი');
@@ -76,8 +76,9 @@ export default function SectionPage({ section, onReleaseClick, onReviewClick }: 
             {profile && <RoleBadge role={String(profile.role ?? 'user')} category={String(profile.author_category ?? '')} isVerified={Boolean(profile.is_verified)} />}
             {isReview && <span className="ml-auto font-bold text-cyan-300">{Number(row.total_score ?? 0)}</span>}
           </div>
-          <button type="button" onClick={() => isReview ? onReviewClick(String(row.id)) : onReleaseClick(releaseId)} className="w-full text-left">
+          <button type="button" onClick={() => section === 'author-picks' ? onReviewClick(String(likedReview?.id ?? '')) : isReview ? onReviewClick(String(row.id)) : onReleaseClick(releaseId)} className="w-full text-left">
             <h2 className="line-clamp-3 break-words font-semibold text-white hover:text-cyan-300">{title}</h2>
+            {section === 'author-picks' && Boolean(likedReview?.content) && <p className="mt-2 line-clamp-3 break-all text-sm text-gray-400">{String(likedReview?.content)}</p>}
             {release && <p className="mt-2 truncate text-xs text-gray-400">{String(release.artist_name ?? '')} · {String(release.title ?? '')}</p>}
           </button>
         </article>;

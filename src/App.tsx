@@ -302,7 +302,7 @@ function AppContent() {
 
             <div className="space-y-2">
               <button type="button" onClick={() => openSection('author-picks')} className="block w-full text-right text-sm font-semibold text-cyan-300">ყველას ნახვა →</button>
-              <AuthorsPicks releaseById={releaseById} onReleaseClick={openRelease} preview />
+              <AuthorsPicks onReviewClick={openReview} preview />
             </div>
 
             <div className="space-y-2">
