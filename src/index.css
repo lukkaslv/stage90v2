@@ -79,19 +79,60 @@ body {
   font-family: 'Noto Sans Georgian', system-ui, -apple-system, sans-serif;
 }
 
-.reaction-canvas { container-type: inline-size; background: transparent; }
-.reaction-canvas [aria-label="ბოლო 24 საათის ტოპ-15"] h2 { font-size: 1.35cqw; }
-.reaction-canvas [aria-label="ბოლო 24 საათის ტოპ-15"] > div > span { font-size: .85cqw; }
-.reaction-canvas [aria-label="ბოლო 24 საათის ტოპ-15"] > p { font-size: 1.1cqw; }
-.reaction-canvas ol li { font-size: .82cqw; }
-.reaction-canvas ol li > span:first-child { font-size: 1.05cqw; }
-.reaction-canvas [aria-label="რელიზის ვიდეო"] h1 { font-size: 2.05cqw; }
-.reaction-canvas [aria-label="რელიზის ვიდეო"] p { font-size: 1.15cqw; }
-.reaction-canvas [aria-label="რელიზის ვიდეო"] > div > span { font-size: .85cqw; }
-.reaction-canvas [aria-label="შეფასება"] > p:first-child { font-size: 1.45cqw; }
-.reaction-canvas [aria-label="შეფასება"] h2 { font-size: 1.7cqw; }
-.reaction-canvas [aria-label="შეფასება"] > p, .reaction-canvas [aria-label="შეფასება"] > div { font-size: 1.05cqw; }
-.reaction-canvas [aria-label="შეფასება"] strong.block.font-black { font-size: 4.4cqw; }
+.reaction-canvas { container-type: inline-size; background: transparent; font-family: 'Noto Sans Georgian', system-ui, sans-serif; }
+.reaction-canvas-content { border-right: 1px solid var(--line-strong); background: var(--bg); }
+.reaction-top { border-bottom: 1px solid var(--line-strong); background: #111217; padding: 1.25cqw 1.45cqw 1.1cqw; }
+.reaction-top-heading { min-height: 2.25cqw; margin-bottom: .65cqw; }
+.reaction-top-heading h2 { font-size: 1.3cqw; line-height: 1.2; letter-spacing: -.025em; }
+.reaction-section-marker { width: .24cqw; height: 1.3cqw; flex: none; background: var(--pink); }
+.reaction-supporting, .reaction-top-state { color: #b6bac6; }
+.reaction-top-state.text-amber-300 { color: #fcd34d; }
+.reaction-top-heading > .reaction-supporting { font-size: .75cqw; }
+.reaction-top-state { font-size: 1cqw; }
+.reaction-top-list { gap: .45cqw; }
+.reaction-top-item { gap: .35cqw; border: 1px solid #393c45; background: var(--bg-card); padding: .35cqw; font-size: .74cqw; line-height: 1.25; }
+.reaction-top-item-current { border-color: #6589ff; background: #1d2d60; box-shadow: inset .16cqw 0 var(--pink); }
+.reaction-rank { color: #f5f5f5; font-family: 'Archivo Black', 'Noto Sans Georgian', sans-serif; font-size: .9cqw; letter-spacing: -.04em; }
+.reaction-top-cover { width: 2.6cqw; height: 2.6cqw; }
+.reaction-top-item .reaction-supporting { margin-top: .22cqw; font-size: .65cqw; }
+.reaction-video { border-right: 1px solid var(--border); background: var(--bg); padding: 2cqw 1.5cqw 1.7cqw; }
+.reaction-video-heading { min-height: 4.2cqw; margin-bottom: 1.3cqw; }
+.reaction-artist { color: #ff80c2; font-size: 1.05cqw; }
+.reaction-video-heading h1 { margin-top: .2cqw; font-size: 1.85cqw; line-height: 1.2; letter-spacing: -.035em; }
+.reaction-video-brand { gap: .42cqw; color: #f5f5f5; font-family: 'Archivo Black', 'Noto Sans Georgian', sans-serif; font-size: .8cqw; letter-spacing: -.04em; }
+.reaction-video-brand img { width: 1.6cqw; height: 1.6cqw; }
+.reaction-video-frame { border: 1px solid var(--border); }
+.reaction-video-empty { color: #b6bac6; font-size: 1cqw; }
+.reaction-video-empty svg { width: 2.7cqw; height: 2.7cqw; }
+.reaction-track { margin-top: 1.1cqw; color: #c8cbd3; font-size: .9cqw; }
+.reaction-score { overflow: hidden; border-top: .16cqw solid var(--blue); background: var(--bg-card); padding: 1cqw 1.05cqw .75cqw; }
+.reaction-rating-heading { min-height: 1.45cqw; }
+.reaction-rating-heading h2 { font-size: .85cqw; line-height: 1.2; }
+.reaction-rating-icon { width: 1.35cqw; height: 1.35cqw; flex: none; border-radius: .2cqw; background: #1a2949; color: #9bb7ff; }
+.reaction-rating-icon svg { width: .85cqw; height: .85cqw; }
+.reaction-rating-result { margin-top: .55cqw; }
+.reaction-rating-number { width: 5.25cqw; height: 4.8cqw; border: 1px solid #758bca; border-radius: .2cqw; background: #1c2948; }
+.reaction-rating-number strong { font-size: 1.9cqw; line-height: 1; }
+.reaction-rating-number > span { margin-top: .12cqw; color: #b6bac6; font-size: .55cqw; }
+.reaction-rating-tier { margin-top: .32cqw; padding: .17cqw .5cqw; font-size: .66cqw; }
+.reaction-rating-tier svg { width: .7cqw; height: .7cqw; }
+.reaction-rating-prompt { margin-top: .65cqw; color: #b6bac6; font-size: .63cqw; line-height: 1.3; }
+.reaction-rating-criteria { display: grid; gap: .48cqw; margin-top: .5cqw; }
+.reaction-rating-label { font-size: .72cqw; line-height: 1.2; }
+.reaction-rating-label strong { color: #83a9ff; }
+.reaction-rating-question { margin-top: .16cqw; color: #b6bac6; font-size: .6cqw; line-height: 1.25; }
+.reaction-rating-hint { margin-top: .1cqw; color: #858b99; font-size: .56cqw; line-height: 1.2; }
+.reaction-score input[type="range"] { display: block; margin-top: .38cqw; height: .3cqw; }
+.reaction-rating-vibe { margin-top: .55cqw; border-top: 1px solid var(--border); padding-top: .5cqw; }
+.reaction-rating-vibe .reaction-rating-label strong { color: #ff80c2; font-size: .66cqw; }
+.reaction-rating-vibe .reaction-rating-question { margin-top: .22cqw; }
+.reaction-rating-scale { margin-top: .38cqw; color: #858b99; font-size: .52cqw; }
+.reaction-rating-scale-current { color: #ff80c2; font-weight: 800; }
+.reaction-rating-coefficient { margin-top: .25cqw; color: #b6bac6; font-size: .56cqw; }
+.reaction-rating-coefficient span { color: #ff80c2; font-family: monospace; }
+.reaction-rating-formula { margin-top: auto; border: 1px solid var(--border); border-radius: .2cqw; background: var(--bg); padding: .45cqw; color: #b6bac6; font-size: .55cqw; line-height: 1.25; }
+.reaction-rating-formula strong { color: #83a9ff; }
+.reaction-rating-status { margin-top: .25cqw; color: #fcd34d; font-size: .56cqw; }
 
 /* Stage 90 digital identity */
 ::selection { background: #1455f5; color: #fff; }
@@ -380,6 +421,12 @@ input[type="range"].rzt-vibe-slider::-moz-range-thumb {
   background: #e6ebf6;
   box-shadow: none;
 }
+.reaction-score input[type="range"].rzt-slider,
+.reaction-score input[type="range"].rzt-vibe-slider { height: clamp(3px, .3cqw, 6px); }
+.reaction-score input[type="range"].rzt-slider::-webkit-slider-thumb,
+.reaction-score input[type="range"].rzt-vibe-slider::-webkit-slider-thumb,
+.reaction-score input[type="range"].rzt-slider::-moz-range-thumb,
+.reaction-score input[type="range"].rzt-vibe-slider::-moz-range-thumb { width: clamp(8px, .82cqw, 18px); height: clamp(8px, .82cqw, 18px); }
 .score-pulse { animation: none; }
 
 /* Stage 90 component language: a restrained concert poster carried into product UI. */

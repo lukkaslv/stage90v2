@@ -26,6 +26,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   const videoRelease = trackPlayerUrl ? selectedTrack : selectedRelease;
   const score = computeRZTScore(draftParams, draftVibe);
   const hasDraftChanges = Boolean(view && (draftVibe !== view.vibe || draftParams.some((value, index) => value !== view.params[index])));
+  const sessionToken = session?.token;
 
   useEffect(() => {
     if (!hasDraftChanges) return;
@@ -50,6 +51,23 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
       setDraftVibe(restored.vibe);
     });
   }, []);
+
+  useEffect(() => {
+    if (!supabase || !sessionToken || busy || hasDraftChanges) return;
+    const client = supabase;
+    let cancelled = false;
+    const refresh = async () => {
+      const { data, error } = await client.rpc('reaction_session_view', { p_token: sessionToken });
+      if (cancelled || error || !data) return;
+      const next = data as unknown as ReactionView;
+      setView(next);
+      setSelectedReleaseId(next.release.id);
+      setDraftParams(next.params);
+      setDraftVibe(next.vibe);
+    };
+    const timer = window.setInterval(() => { void refresh(); }, 1000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [sessionToken, busy, hasDraftChanges]);
 
   const createSession = async () => {
     if (!supabase || !selectedReleaseId || busy) return;
@@ -90,7 +108,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('reaction_session_update', {
       p_id: session.id, p_release_id: id, p_scene: 'intro', p_track_id: null,
-      p_params: [5, 5, 5, 5], p_vibe: 3, p_revealed: false,
+      p_params: [5, 5, 5, 5], p_vibe: 3, p_revealed: true,
     });
     if (error || !data) { setMessage('რელიზის შეცვლა ვერ მოხერხდა.'); setBusy(false); return; }
     const refreshed = await supabase.rpc('reaction_session_view', { p_token: session.token });
