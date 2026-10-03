@@ -7,6 +7,7 @@ export default function ReactionOutput() {
   const [view, setView] = useState<ReactionView | null>(null);
   const [status, setStatus] = useState('იტვირთება...');
   const [saveStatus, setSaveStatus] = useState('');
+  const [submittingRating, setSubmittingRating] = useState(false);
   const [token] = useState(() => {
     const url = new URL(window.location.href);
     return (url.searchParams.get('token') || url.hash.slice(1)).trim();
@@ -40,6 +41,17 @@ export default function ReactionOutput() {
     setSaveStatus('ინახება...');
     if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => { void persistRating(); }, 200);
+  };
+
+  const submitRating = async () => {
+    if (!supabase || !view || submittingRating || saving.current || pendingRating.current) return;
+    setSubmittingRating(true);
+    setSaveStatus('');
+    const { data, error } = await supabase.rpc('reaction_session_submit_rating', {
+      p_token: token, p_params: view.params, p_vibe: view.vibe,
+    });
+    setSubmittingRating(false);
+    setSaveStatus(error || !data ? 'შეფასება ვერ გაიგზავნა. სცადეთ ხელახლა.' : 'შეფასება გაგზავნილია. საერთო ქულა განახლდა.');
   };
 
   useEffect(() => {
@@ -84,5 +96,5 @@ export default function ReactionOutput() {
   }, [token]);
 
   if (!view) return <main className="flex min-h-screen items-center justify-center bg-[#0b0c11] p-8 text-center text-xl text-gray-300">{status}</main>;
-  return <main className="min-h-screen"><ReactionCanvas view={view} onRatingChange={changeRating} saveStatus={saveStatus} /></main>;
+  return <main className="min-h-screen"><ReactionCanvas view={view} onRatingChange={changeRating} onRatingSubmit={() => { void submitRating(); }} submittingRating={submittingRating} saveStatus={saveStatus} /></main>;
 }

@@ -132,6 +132,10 @@ body {
 .reaction-rating-coefficient span { color: #ff80c2; font-family: monospace; }
 .reaction-rating-formula { margin-top: auto; border: 1px solid var(--border); border-radius: .2cqw; background: var(--bg); padding: .45cqw; color: #b6bac6; font-size: .55cqw; line-height: 1.25; }
 .reaction-rating-formula strong { color: #83a9ff; }
+.reaction-rating-submit { min-height: 1.8cqw; margin-top: .4cqw; background: var(--blue); color: #fff; font-size: .68cqw; }
+.reaction-rating-submit svg { width: .8cqw; height: .8cqw; }
+.reaction-rating-submit:focus-visible { outline-offset: 2px; }
+.reaction-rating-submit:disabled { opacity: .55; }
 .reaction-rating-status { margin-top: .25cqw; color: #fcd34d; font-size: .56cqw; }
 
 /* Stage 90 digital identity */

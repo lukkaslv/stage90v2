@@ -1,4 +1,4 @@
-import { Gem, TrendingUp } from 'lucide-react';
+import { Gem, Send, TrendingUp } from 'lucide-react';
 import { computeRZTScore, RZT_PARAMS, VIBE_COEFFICIENTS, VIBE_LEVELS } from '@/types/music';
 import { STRICT_VALUE_TIER_CONFIG, valueTierFromScore } from '@/lib/valueTier';
 
@@ -7,10 +7,12 @@ interface ReactionRatingPanelProps {
   vibe: number;
   revealed: boolean;
   onChange?: (params: number[], vibe: number) => void;
+  onSubmit?: () => void;
+  submitting?: boolean;
   saveStatus?: string;
 }
 
-export default function ReactionRatingPanel({ params, vibe, revealed, onChange, saveStatus }: ReactionRatingPanelProps) {
+export default function ReactionRatingPanel({ params, vibe, revealed, onChange, onSubmit, submitting = false, saveStatus }: ReactionRatingPanelProps) {
   const score = computeRZTScore(params, vibe);
   const tier = valueTierFromScore(score);
   const tierConfig = STRICT_VALUE_TIER_CONFIG[tier];
@@ -46,6 +48,7 @@ export default function ReactionRatingPanel({ params, vibe, revealed, onChange, 
     </div>
 
     <div className="reaction-rating-formula">ფორმულა: ({params.join(' + ')}) × 1.4 × {VIBE_COEFFICIENTS[vibe - 1].toFixed(4)} = <strong>{revealed ? score : '—'}</strong></div>
+    <button type="button" className="reaction-rating-submit flex w-full items-center justify-center gap-2 font-bold" onClick={onSubmit} disabled={!onSubmit || submitting || saveStatus === 'ინახება...'}><Send aria-hidden="true" />{submitting ? 'იგზავნება...' : 'შეფასების გაგზავნა'}</button>
     {saveStatus && <p className="reaction-rating-status" role="status">{saveStatus}</p>}
   </section>;
 }

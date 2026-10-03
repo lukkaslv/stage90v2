@@ -9,10 +9,12 @@ import ReactionRatingPanel from '@/components/ReactionRatingPanel';
 interface ReactionCanvasProps {
   view: ReactionView;
   onRatingChange?: (params: number[], vibe: number) => void;
+  onRatingSubmit?: () => void;
+  submittingRating?: boolean;
   saveStatus?: string;
 }
 
-export default function ReactionCanvas({ view, onRatingChange, saveStatus }: ReactionCanvasProps) {
+export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, submittingRating, saveStatus }: ReactionCanvasProps) {
   const { top, loading, error } = useDailyTop15();
   const [fallbackVideos, setFallbackVideos] = useState<Record<string, string | null>>({});
   const { release, tracks } = view;
@@ -71,7 +73,7 @@ export default function ReactionCanvas({ view, onRatingChange, saveStatus }: Rea
           {view.scene === 'tracks' && <p className="reaction-track truncate font-semibold">{selectedTrack ? `მიმდინარე ტრეკი: ${selectedTrack.title}` : 'აირჩიეთ ტრეკი სტუდიაში'}</p>}
         </section>
 
-        <ReactionRatingPanel params={view.params} vibe={view.vibe} revealed={view.revealed} onChange={onRatingChange} saveStatus={saveStatus} />
+        <ReactionRatingPanel params={view.params} vibe={view.vibe} revealed={view.revealed} onChange={submittingRating ? undefined : onRatingChange} onSubmit={onRatingSubmit} submitting={submittingRating} saveStatus={saveStatus} />
       </div>
     </div>
     <div className="absolute inset-y-0 right-0 w-[28%]" aria-hidden="true" />
