@@ -13,6 +13,7 @@ export default function ReactionOutput() {
   const [status, setStatus] = useState('იტვირთება...');
 
   useEffect(() => {
+    document.getElementById('initial-page-loader')?.remove();
     const token = window.location.hash.slice(1);
     if (!supabase || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(token)) {
       setStatus('ბმული არასწორია.');
