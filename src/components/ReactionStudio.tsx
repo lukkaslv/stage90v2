@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Copy, ExternalLink, Radio, RotateCcw, X } from 'lucide-react';
+import { Check, Copy, ExternalLink, Eye, EyeOff, Music2, Radio, RotateCcw, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { computeRZTScore, RZT_PARAMS, VIBE_LEVELS } from '@/types/music';
+import { useDailyTop15 } from '@/hooks/useDailyTop15';
 import { reactionOutputUrl, reactionStorageKey, type ReactionScene, type ReactionSession, type ReactionView } from '@/lib/reactionStudio';
+import { youtubeEmbedUrl } from '@/lib/youtubeEmbed';
+import ReactionCanvas from '@/components/ReactionCanvas';
 
 type Row = Record<string, unknown>;
 
@@ -14,7 +17,22 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   const [draftVibe, setDraftVibe] = useState(3);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const { top, loading: topLoading, error: topError } = useDailyTop15();
   const activeReleases = releases.filter((row) => row.is_active === true && row.parent_id == null);
+  const selectedRelease = activeReleases.find((row) => String(row.id) === selectedReleaseId);
+  const selectedTrack = view?.track_id ? releases.find((row) => String(row.id) === view.track_id) : null;
+  const trackPlayerUrl = youtubeEmbedUrl(selectedTrack?.youtube_url);
+  const playerUrl = trackPlayerUrl ?? youtubeEmbedUrl(selectedRelease?.youtube_url);
+  const videoRelease = trackPlayerUrl ? selectedTrack : selectedRelease;
+  const score = computeRZTScore(draftParams, draftVibe);
+  const hasDraftChanges = Boolean(view && (draftVibe !== view.vibe || draftParams.some((value, index) => value !== view.params[index])));
+
+  useEffect(() => {
+    if (!hasDraftChanges) return;
+    const warnBeforeLeave = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warnBeforeLeave);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeave);
+  }, [hasDraftChanges]);
 
   useEffect(() => {
     const raw = window.sessionStorage.getItem(reactionStorageKey);
@@ -22,8 +40,8 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     let saved: ReactionSession;
     try { saved = JSON.parse(raw) as ReactionSession; } catch { window.sessionStorage.removeItem(reactionStorageKey); return; }
     if (!saved.id || !saved.token) { window.sessionStorage.removeItem(reactionStorageKey); return; }
-    void supabase.rpc('reaction_session_view', { p_token: saved.token }).then(({ data }) => {
-      if (!data) { window.sessionStorage.removeItem(reactionStorageKey); return; }
+    void supabase.rpc('reaction_session_view', { p_token: saved.token }).then(({ data, error }) => {
+      if (error || !data) { window.sessionStorage.removeItem(reactionStorageKey); return; }
       const restored = data as unknown as ReactionView;
       setSession(saved);
       setView(restored);
@@ -42,8 +60,8 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     const result = await supabase.rpc('reaction_session_view', { p_token: created.token });
     if (result.error || !result.data) { setMessage('სესიის ჩატვირთვა ვერ მოხერხდა.'); setBusy(false); return; }
     window.sessionStorage.setItem(reactionStorageKey, JSON.stringify(created));
-    setSession(created);
     const createdView = result.data as unknown as ReactionView;
+    setSession(created);
     setView(createdView);
     setDraftParams(createdView.params);
     setDraftVibe(createdView.vibe);
@@ -55,13 +73,8 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     const next = { ...view, ...changes };
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('reaction_session_update', {
-      p_id: session.id,
-      p_release_id: next.release.id,
-      p_scene: next.scene,
-      p_track_id: next.track_id,
-      p_params: next.params,
-      p_vibe: next.vibe,
-      p_revealed: next.revealed,
+      p_id: session.id, p_release_id: next.release.id, p_scene: next.scene,
+      p_track_id: next.track_id, p_params: next.params, p_vibe: next.vibe, p_revealed: next.revealed,
     });
     if (error || !data) { setMessage('ცვლილება ვერ შეინახა. სცადეთ ხელახლა.'); setBusy(false); return; }
     const refreshed = await supabase.rpc('reaction_session_view', { p_token: session.token });
@@ -71,26 +84,28 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   };
 
   const changeRelease = async (id: string) => {
-    setSelectedReleaseId(id);
-    if (!supabase || !session || !view || busy) return;
+    if (id === selectedReleaseId || busy) return;
+    if (hasDraftChanges && !window.confirm('შეუნახავი შეფასება დაიკარგება. შეცვალოთ რელიზი?')) return;
+    if (!supabase || !session || !view) { setSelectedReleaseId(id); return; }
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('reaction_session_update', {
       p_id: session.id, p_release_id: id, p_scene: 'intro', p_track_id: null,
       p_params: [5, 5, 5, 5], p_vibe: 3, p_revealed: false,
     });
-    if (error || !data) { setMessage('რელიზის შეცვლა ვერ მოხერხდა.'); setSelectedReleaseId(view.release.id); setBusy(false); return; }
+    if (error || !data) { setMessage('რელიზის შეცვლა ვერ მოხერხდა.'); setBusy(false); return; }
     const refreshed = await supabase.rpc('reaction_session_view', { p_token: session.token });
     if (refreshed.data) {
       const changedView = refreshed.data as unknown as ReactionView;
       setView(changedView);
+      setSelectedReleaseId(changedView.release.id);
       setDraftParams(changedView.params);
       setDraftVibe(changedView.vibe);
-    }
+    } else setMessage('რელიზის ჩატვირთვა ვერ მოხერხდა.');
     setBusy(false);
   };
 
   const revokeSession = async () => {
-    if (!supabase || !session || busy) return;
+    if (!supabase || !session || busy || !window.confirm('გსურთ სტუდიის ბმულის გაუქმება?')) return;
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('reaction_session_revoke', { p_id: session.id });
     if (error || !data) { setMessage('ბმულის გაუქმება ვერ მოხერხდა.'); setBusy(false); return; }
@@ -109,31 +124,56 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     { id: 'tracks', label: 'ტრეკების სია' },
     { id: 'score', label: 'შეფასება' },
   ];
-  const score = computeRZTScore(draftParams, draftVibe);
-  const hasDraftChanges = Boolean(view && (draftVibe !== view.vibe || draftParams.some((value, index) => value !== view.params[index])));
 
-  return <section className="space-y-5 rounded-xl border border-blue-400/30 bg-[#121215] p-5">
-    <div className="flex items-start gap-3"><Radio className="mt-1 h-5 w-5 text-pink-400" /><div><h2 className="text-lg font-bold text-white">რეაქციის სტუდია</h2><p className="mt-1 text-sm text-gray-400">მართეთ ის, რაც ვიდეოში ჩანს. ბმული მოქმედებს 12 საათის განმავლობაში.</p></div></div>
-    <div className="flex flex-col gap-3 sm:flex-row">
-      <select aria-label="რელიზის არჩევა" className="min-w-0 flex-1 border border-gray-600 bg-[#0b0b0e] px-3 py-2 text-white" value={selectedReleaseId} onChange={(event) => void changeRelease(event.target.value)} disabled={busy}>
-        <option value="">აირჩიეთ რელიზი</option>
-        {activeReleases.map((row) => <option key={String(row.id)} value={String(row.id)}>{String(row.artist_name ?? '')} — {String(row.title ?? '')}</option>)}
-      </select>
-      {!session && <button type="button" onClick={() => void createSession()} disabled={!selectedReleaseId || busy} className="bg-blue-500 px-4 py-2 font-bold text-white disabled:opacity-50">სესიის შექმნა</button>}
+  return <section className="space-y-5">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[#343844] pb-5">
+      <div className="flex items-start gap-3"><div className="border border-pink-400/30 bg-pink-400/10 p-2"><Radio className="h-5 w-5 text-pink-400" /></div><div><h2 className="text-xl font-black text-white">რეაქციის სტუდია</h2><p className="mt-1 text-sm text-gray-400">რელიზი, შეფასება და OBS-ის ეკრანი ერთ სივრცეში</p></div></div>
+      <span className={`inline-flex items-center gap-2 border px-3 py-1.5 text-xs font-bold ${session ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300' : 'border-gray-600 text-gray-400'}`}><span className={`h-2 w-2 rounded-full ${session ? 'bg-emerald-400' : 'bg-gray-500'}`} />{session ? 'სესია აქტიურია' : 'სესია არ არის შექმნილი'}</span>
     </div>
-    {session && view && <>
-      <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => void copyLink()} className="inline-flex items-center gap-2 border border-blue-400 px-3 py-2 text-sm text-blue-200"><Copy className="h-4 w-4" />OBS-ის ბმულის კოპირება</button>
-        <a href={reactionOutputUrl(session.token)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 border border-gray-600 px-3 py-2 text-sm text-gray-200"><ExternalLink className="h-4 w-4" />ეკრანის ნახვა</a>
-        <button type="button" onClick={() => void revokeSession()} disabled={busy} className="inline-flex items-center gap-2 border border-rose-500/60 px-3 py-2 text-sm text-rose-300 disabled:opacity-50"><X className="h-4 w-4" />ბმულის გაუქმება</button>
+
+    <div className="border border-[#343844] bg-[#12151d] p-4">
+      <div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-bold text-white">ბოლო 24 საათის ტოპ-15</h3><p className="text-xs text-gray-500">ადგილი განისაზღვრება შეფასებების რაოდენობით</p></div><span className="text-xs text-gray-500">{top.length}/15</span></div>
+      {topLoading && top.length === 0 ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : topError && top.length === 0 ? <p className="py-5 text-sm text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : top.length === 0 ? <p className="py-5 text-sm text-gray-400">დღის აქტიური რელიზები ჯერ არ არის.</p> : <div className="flex gap-2 overflow-x-auto pb-2">{top.map(({ release, dailyCount }, index) => <button key={String(release.id)} type="button" onClick={() => void changeRelease(String(release.id))} disabled={busy} aria-pressed={selectedReleaseId === String(release.id)} className={`flex w-48 shrink-0 items-center gap-2 border p-2 text-left transition-colors disabled:opacity-50 ${selectedReleaseId === String(release.id) ? 'border-blue-400 bg-blue-400/15' : 'border-[#343844] bg-[#191d27] hover:border-blue-400/50'}`}><span className="text-sm font-black text-blue-300">{String(index + 1).padStart(2, '0')}</span>{release.coverUrl ? <img src={release.coverUrl} alt="" className="h-10 w-10 shrink-0 object-cover" /> : <Music2 className="h-10 w-10 shrink-0 p-2 text-gray-500" />}<span className="min-w-0"><span className="block truncate text-xs font-bold text-white">{release.title}</span><span className="block truncate text-[11px] text-gray-400">{dailyCount} შეფასება</span></span></button>)}</div>}
+    </div>
+
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)]">
+      <div className="min-w-0 space-y-5">
+        <div className="border border-[#343844] bg-[#12151d] p-4">
+          <div className="mb-3 flex items-center justify-between gap-3"><h3 className="font-bold text-white">რელიზის ვიდეო</h3><span className="text-xs text-gray-500">YouTube</span></div>
+          <div className="aspect-video overflow-hidden bg-[#0b0d16]">{playerUrl ? <iframe key={playerUrl} src={playerUrl} title={String(videoRelease?.title ?? 'რელიზის ვიდეო')} className="h-full w-full" allow="encrypted-media; picture-in-picture" allowFullScreen /> : <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center text-sm text-gray-400"><Music2 className="h-7 w-7 text-blue-300" />{selectedRelease ? 'ამ რელიზს YouTube ბმული არ აქვს.' : 'აირჩიეთ რელიზი ვიდეოს სანახავად.'}</div>}</div>
+          {videoRelease && <p className="mt-3 truncate text-sm text-gray-300"><strong className="text-white">{String(videoRelease.artist_name ?? '')}</strong> · {String(videoRelease.title ?? '')}</p>}
+        </div>
+        <div className="border border-[#343844] bg-[#12151d] p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h3 className="font-bold text-white">OBS-ის ეკრანის წინასწარი ნახვა</h3><span className="text-xs text-gray-500">1920 × 1080</span></div>
+          <div className="relative overflow-hidden border border-[#343844] bg-[linear-gradient(45deg,#222733_25%,transparent_25%),linear-gradient(-45deg,#222733_25%,transparent_25%),linear-gradient(45deg,transparent_75%,#222733_75%),linear-gradient(-45deg,transparent_75%,#222733_75%)] bg-[length:20px_20px] bg-[position:0_0,0_10px,10px_-10px,-10px_0px]">
+            {view ? <ReactionCanvas view={view} /> : <div className="flex aspect-video items-center justify-center bg-[#0b0d16] px-5 text-center text-sm text-gray-400">შექმენით სესია ეკრანის სანახავად.</div>}
+            {view && <div className="pointer-events-none absolute inset-y-0 right-0 flex w-[28%] items-center justify-center border-l border-dashed border-white/30 px-2 text-center text-xs font-bold text-white/80">კამერის ადგილი OBS-ში</div>}
+          </div>
+          <p className="mt-3 text-xs leading-relaxed text-gray-400">კამერა დაამატეთ OBS-ში ცალკე წყაროდ და განათავსეთ მარჯვენა გამჭვირვალე ნაწილში, ბრაუზერის წყაროს ქვეშ. ვიდეო გაუშვით OBS-ის ბრაუზერის წყაროს ინტერაქციით.</p>
+        </div>
       </div>
-      <p className="text-xs text-gray-500">ჩასვით ბმული OBS-ში, როგორც ბრაუზერის წყარო. რეკომენდებული ზომა: 1920 × 1080. ბმული შეინახეთ პირადად.</p>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="ეკრანის არჩევა">{scenes.map((scene) => <button key={scene.id} type="button" onClick={() => void updateView({ scene: scene.id })} disabled={busy} className={`border px-3 py-2 text-sm disabled:opacity-50 ${view.scene === scene.id ? 'border-pink-400 bg-pink-400/20 text-white' : 'border-gray-600 text-gray-300'}`}>{scene.label}</button>)}</div>
-      {view.tracks.length > 0 && <div><p className="mb-2 text-sm font-semibold text-white">მიმდინარე ტრეკი</p><div className="flex flex-wrap gap-2">{view.tracks.map((track) => <button key={track.id} type="button" onClick={() => void updateView({ scene: 'tracks', track_id: track.id })} disabled={busy} className={`border px-3 py-2 text-xs disabled:opacity-50 ${view.track_id === track.id ? 'border-blue-400 bg-blue-400/20 text-white' : 'border-gray-600 text-gray-300'}`}>{track.track_number ? `${track.track_number}. ` : ''}{track.title}</button>)}</div></div>}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{RZT_PARAMS.map((param, index) => <label key={param.id} className="border border-gray-700 p-3 text-sm text-gray-300"><span className="flex justify-between"><span>{param.label}</span><strong className="text-white">{draftParams[index]}</strong></span><input type="range" min="1" max="10" value={draftParams[index]} disabled={busy} onChange={(event) => setDraftParams((previous) => previous.map((point, pointIndex) => pointIndex === index ? Number(event.target.value) : point))} className="mt-3 w-full accent-blue-400" /></label>)}</div>
-      <label className="block max-w-sm border border-gray-700 p-3 text-sm text-gray-300"><span className="flex justify-between"><span>ატმოსფერო</span><strong className="text-white">{VIBE_LEVELS[draftVibe - 1]}</strong></span><input type="range" min="1" max="5" value={draftVibe} disabled={busy} onChange={(event) => setDraftVibe(Number(event.target.value))} className="mt-3 w-full accent-pink-400" /></label>
-      <div className="flex flex-wrap items-center gap-3 border-t border-gray-700 pt-4"><span className="text-sm text-gray-300">პირადი შეფასება: <strong className="text-xl text-white">{score}/90</strong></span><button type="button" onClick={() => void updateView({ params: draftParams, vibe: draftVibe })} disabled={busy || !hasDraftChanges} className="border border-blue-400 px-4 py-2 text-sm font-bold text-blue-200 disabled:opacity-50">შეფასების გაგზავნა</button><button type="button" onClick={() => void updateView({ scene: 'score', params: draftParams, vibe: draftVibe, revealed: !view.revealed })} disabled={busy} className="bg-blue-500 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{view.revealed ? 'შეფასების დამალვა' : 'შეფასების გამოჩენა'}</button><button type="button" onClick={() => { setDraftParams([5, 5, 5, 5]); setDraftVibe(3); void updateView({ params: [5, 5, 5, 5], vibe: 3, revealed: false }); }} disabled={busy} className="inline-flex items-center gap-1 border border-gray-600 px-3 py-2 text-sm text-gray-300 disabled:opacity-50"><RotateCcw className="h-4 w-4" />თავიდან დაწყება</button></div>
-    </>}
+
+      <div className="min-w-0 space-y-5">
+        <div className="border border-[#343844] bg-[#12151d] p-4">
+          <h3 className="mb-3 font-bold text-white">ეთერის მართვა</h3>
+          <label className="mb-3 block text-xs font-semibold text-gray-400">რელიზი<select aria-label="რელიზის არჩევა" className="mt-1.5 w-full border border-gray-600 bg-[#0b0d16] px-3 py-2.5 text-sm text-white" value={selectedReleaseId} onChange={(event) => void changeRelease(event.target.value)} disabled={busy}><option value="">აირჩიეთ რელიზი</option>{activeReleases.map((row) => <option key={String(row.id)} value={String(row.id)}>{String(row.artist_name ?? '')} — {String(row.title ?? '')}</option>)}</select></label>
+          {!session ? <button type="button" onClick={() => void createSession()} disabled={!selectedReleaseId || busy} className="w-full bg-blue-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">სესიის შექმნა</button> : view && <>
+            <div className="grid grid-cols-3 gap-2" role="group" aria-label="ეკრანის არჩევა">{scenes.map((scene) => <button key={scene.id} type="button" onClick={() => void updateView({ scene: scene.id })} disabled={busy} aria-pressed={view.scene === scene.id} className={`min-h-11 border px-2 py-2 text-xs font-semibold disabled:opacity-50 ${view.scene === scene.id ? 'border-pink-400 bg-pink-400/15 text-white' : 'border-gray-600 text-gray-300'}`}>{scene.label}</button>)}</div>
+            {view.tracks.length > 0 && <div className="mt-4"><p className="mb-2 text-xs font-semibold text-gray-400">მიმდინარე ტრეკი</p><div className="flex flex-wrap gap-2">{view.tracks.map((track) => <button key={track.id} type="button" onClick={() => void updateView({ scene: 'tracks', track_id: track.id })} disabled={busy} className={`border px-3 py-2 text-xs disabled:opacity-50 ${view.track_id === track.id ? 'border-blue-400 bg-blue-400/20 text-white' : 'border-gray-600 text-gray-300'}`}>{track.track_number ? `${track.track_number}. ` : ''}{track.title}</button>)}</div></div>}
+            <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => void copyLink()} className="inline-flex items-center gap-1.5 border border-blue-400 px-3 py-2 text-xs font-semibold text-blue-200"><Copy className="h-4 w-4" />OBS-ის ბმული</button><a href={reactionOutputUrl(session.token)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 border border-gray-600 px-3 py-2 text-xs font-semibold text-gray-200"><ExternalLink className="h-4 w-4" />ეკრანის გახსნა</a><button type="button" onClick={() => void revokeSession()} disabled={busy} className="inline-flex items-center gap-1.5 border border-rose-500/60 px-3 py-2 text-xs font-semibold text-rose-300 disabled:opacity-50"><X className="h-4 w-4" />ბმულის გაუქმება</button></div>
+            <p className="mt-3 text-xs text-gray-500">ბმული ჩასვით OBS-ში ბრაუზერის წყაროდ. ზომა: 1920 × 1080. ბმული მოქმედებს 12 საათი.</p>
+          </>}
+        </div>
+        {session && view && <div className="border border-[#343844] bg-[#12151d] p-4">
+          <div className="mb-4 flex items-center justify-between gap-3"><div><h3 className="font-bold text-white">პირადი შეფასება</h3><p className="text-xs text-gray-500">ცვლილება ეკრანზე გამოჩნდება გაგზავნის შემდეგ</p></div><strong className="shrink-0 text-3xl font-black tabular-nums text-white">{score}<small className="text-sm text-gray-500">/90</small></strong></div>
+          <div className="space-y-3">{RZT_PARAMS.map((param, index) => <label key={param.id} className="block border border-gray-700 p-3 text-sm text-gray-300"><span className="flex justify-between"><span>{param.label}</span><strong className="tabular-nums text-white">{draftParams[index]}/10</strong></span><input type="range" min="1" max="10" value={draftParams[index]} disabled={busy} onChange={(event) => setDraftParams((previous) => previous.map((point, pointIndex) => pointIndex === index ? Number(event.target.value) : point))} className="mt-3 w-full accent-blue-400" /></label>)}</div>
+          <label className="mt-3 block border border-gray-700 p-3 text-sm text-gray-300"><span className="flex justify-between gap-2"><span>ატმოსფერო</span><strong className="text-right text-white">{VIBE_LEVELS[draftVibe - 1]}</strong></span><input type="range" min="1" max="5" value={draftVibe} disabled={busy} onChange={(event) => setDraftVibe(Number(event.target.value))} className="mt-3 w-full accent-pink-400" /></label>
+          <p className={`mt-3 flex items-center gap-1.5 text-xs ${hasDraftChanges ? 'text-amber-300' : 'text-emerald-300'}`}>{hasDraftChanges ? 'შეუნახავი ცვლილებები' : <><Check className="h-3.5 w-3.5" />შეფასება შენახულია</>}</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2"><button type="button" onClick={() => void updateView({ params: draftParams, vibe: draftVibe })} disabled={busy || !hasDraftChanges} className="border border-blue-400 px-4 py-2.5 text-sm font-bold text-blue-200 disabled:opacity-50">შეფასების გაგზავნა</button><button type="button" onClick={() => void updateView({ scene: 'score', params: draftParams, vibe: draftVibe, revealed: !view.revealed })} disabled={busy} className="inline-flex items-center justify-center gap-2 bg-blue-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{view.revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{view.revealed ? 'შეფასების დამალვა' : 'შეფასების გამოჩენა'}</button></div>
+          <button type="button" onClick={() => { if (hasDraftChanges && !window.confirm('შეუნახავი შეფასება დაიკარგება. დავიწყოთ თავიდან?')) return; setDraftParams([5, 5, 5, 5]); setDraftVibe(3); void updateView({ params: [5, 5, 5, 5], vibe: 3, revealed: false }); }} disabled={busy} className="mt-3 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white disabled:opacity-50"><RotateCcw className="h-3.5 w-3.5" />თავიდან დაწყება</button>
+        </div>}
+      </div>
+    </div>
     {message && <p role="status" className="text-sm text-amber-300">{message}</p>}
   </section>;
 }

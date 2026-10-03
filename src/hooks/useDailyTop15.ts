@@ -58,7 +58,7 @@ export function useDailyTop15() {
     };
 
     void load();
-    const channel = client.channel('daily-top-15')
+    const channel = client.channel(`daily-top-15-${window.crypto.randomUUID()}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, () => { void load(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'releases' }, () => { void load(); })
       .subscribe();

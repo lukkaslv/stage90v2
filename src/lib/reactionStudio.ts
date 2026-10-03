@@ -5,6 +5,7 @@ export interface ReactionRelease {
   title: string;
   artist_name: string;
   cover_url: string | null;
+  youtube_url?: string | null;
   release_type: string | null;
   overall_score: number | null;
   community_score: number | null;
@@ -16,6 +17,7 @@ export interface ReactionTrack {
   title: string;
   artist_name: string;
   track_number: number | null;
+  youtube_url?: string | null;
 }
 
 export interface ReactionView {
@@ -39,5 +41,5 @@ export interface ReactionSession {
 export const reactionStorageKey = 'stage90-reaction-session';
 
 export function reactionOutputUrl(token: string): string {
-  return `${window.location.origin}/studio/obs#${encodeURIComponent(token)}`;
+  return `${window.location.origin}/studio/obs?token=${encodeURIComponent(token)}`;
 }

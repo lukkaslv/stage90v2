@@ -79,6 +79,20 @@ body {
   font-family: 'Noto Sans Georgian', system-ui, -apple-system, sans-serif;
 }
 
+.reaction-canvas { container-type: inline-size; background: transparent; }
+.reaction-canvas [aria-label="ბოლო 24 საათის ტოპ-15"] h2 { font-size: 1.35cqw; }
+.reaction-canvas [aria-label="ბოლო 24 საათის ტოპ-15"] > div > span { font-size: .85cqw; }
+.reaction-canvas [aria-label="ბოლო 24 საათის ტოპ-15"] > p { font-size: 1.1cqw; }
+.reaction-canvas ol li { font-size: .82cqw; }
+.reaction-canvas ol li > span:first-child { font-size: 1.05cqw; }
+.reaction-canvas [aria-label="რელიზის ვიდეო"] h1 { font-size: 2.05cqw; }
+.reaction-canvas [aria-label="რელიზის ვიდეო"] p { font-size: 1.15cqw; }
+.reaction-canvas [aria-label="რელიზის ვიდეო"] > div > span { font-size: .85cqw; }
+.reaction-canvas [aria-label="შეფასება"] > p:first-child { font-size: 1.45cqw; }
+.reaction-canvas [aria-label="შეფასება"] h2 { font-size: 1.7cqw; }
+.reaction-canvas [aria-label="შეფასება"] > p, .reaction-canvas [aria-label="შეფასება"] > div { font-size: 1.05cqw; }
+.reaction-canvas [aria-label="შეფასება"] strong.block.font-black { font-size: 4.4cqw; }
+
 /* Stage 90 digital identity */
 ::selection { background: #1455f5; color: #fff; }
 :focus-visible { outline: 2px solid #ff77bf; outline-offset: 3px; }
