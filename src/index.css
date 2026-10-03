@@ -475,7 +475,7 @@ input[type="range"].rzt-vibe-slider::-moz-range-thumb {
 .stage-score-item[data-score-group="1"]::before { background: #1455f5; }
 .stage-score-item[data-score-group="2"]::before { background: linear-gradient(90deg, #ff2299 50%, #1455f5 50%); }
 .stage-score-item + .stage-score-item { border-left: 1px solid #454852; }
-.stage-score-label { margin: 0; color: #c5c7cf; font-size: 10px; font-weight: 700; line-height: 1.2; }
+.stage-score-label { min-width: 0; margin: 0; overflow-wrap: anywhere; color: #c5c7cf; font-size: 10px; font-weight: 700; line-height: 1.2; }
 .stage-score-number { display: flex; align-items: baseline; gap: 2px; margin-top: 6px; }
 .stage-score-number strong { color: #faf9f5; font-family: 'Archivo Black', 'Noto Sans Georgian', sans-serif; font-size: 20px; line-height: 1; }
 .stage-score-number small { color: #a9adb7; font-size: 9px; font-weight: 700; }
