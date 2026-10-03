@@ -11,10 +11,12 @@ export interface DailyTopRelease {
 
 export function useDailyTop15() {
   const [top, setTop] = useState<DailyTopRelease[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const client = supabase;
-    if (!client) return;
+    if (!client) { setLoading(false); setError(true); return; }
     let cancelled = false;
     let request = 0;
 
@@ -26,7 +28,8 @@ export function useDailyTop15() {
         const { data, error } = await client.from('reviews')
           .select('release_id').gte('created_at', since)
           .order('created_at', { ascending: false }).range(from, from + 499);
-        if (cancelled || current !== request || error || !data) return;
+        if (cancelled || current !== request) return;
+        if (error || !data) { setLoading(false); setError(true); return; }
         data.forEach(({ release_id }) => {
           const id = String(release_id);
           counts.set(id, (counts.get(id) ?? 0) + 1);
@@ -41,7 +44,8 @@ export function useDailyTop15() {
         const { data, error } = await queryCatalog((columns) => client.from('releases')
           .select(columns).in('id', candidates).eq('is_active', true).limit(100)
           .returns<Record<string, unknown>[]>());
-        if (cancelled || current !== request || error || !data) return;
+        if (cancelled || current !== request) return;
+        if (error || !data) { setLoading(false); setError(true); return; }
         const byId = new Map(data.map((row) => [String(row.id), normalizeCatalogRelease(row)]));
         candidates.forEach((id) => {
           const release = byId.get(id);
@@ -49,6 +53,8 @@ export function useDailyTop15() {
         });
       }
       setTop(next);
+      setLoading(false);
+      setError(false);
     };
 
     void load();
@@ -64,5 +70,5 @@ export function useDailyTop15() {
     };
   }, []);
 
-  return top;
+  return { top, loading, error };
 }

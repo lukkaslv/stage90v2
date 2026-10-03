@@ -5,6 +5,7 @@ import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import SectionLoader from '@/components/SectionLoader';
 import RoleBadge, { VerificationBadge } from '@/components/RoleBadge';
+import { sectionTitles, type SectionId } from '@/lib/sectionRoutes';
 
 const MediaReleaseModal = lazy(() => import('@/components/MediaReleaseModal'));
 
@@ -15,6 +16,8 @@ interface NavbarProps {
   onOpenAbout?: () => void;
   onBrandClick?: () => void;
   activeTab: PageId;
+  section?: SectionId | null;
+  unknownPath?: boolean;
   onTabChange: (tab: PageId) => void;
   onOpenRelease: (id: string) => void;
   onAdminOpen: () => void;
@@ -22,7 +25,7 @@ interface NavbarProps {
   onToggleCollapsed: () => void;
 }
 
-export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTab, onTabChange, onOpenRelease, onAdminOpen, collapsed, onToggleCollapsed }: NavbarProps) {
+export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTab, section, unknownPath, onTabChange, onOpenRelease, onAdminOpen, collapsed, onToggleCollapsed }: NavbarProps) {
   const { user, logout, isAuthenticated, refreshProfile } = useAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -116,12 +119,16 @@ export default function Navbar({ onOpenAuth, onOpenAbout, onBrandClick, activeTa
         <nav aria-label="გვერდები" className="min-h-0 flex-1 space-y-1 overflow-y-auto px-3 py-6">
           {categoryTabs.map((tab) => {
             const Icon = tabIcons[tab.id];
-            const active = activeTab === tab.id;
+            const active = !unknownPath && activeTab === tab.id && !(tab.id === 'releases' && section);
             return <button key={tab.id} type="button" onClick={() => { onTabChange(tab.id); closeMobile(); }} aria-current={active ? 'page' : undefined} aria-label={tab.label} title={collapsed ? tab.label : undefined} className={`${itemClass} ${active ? 'border border-blue-400/20 bg-blue-400/10 text-blue-300 shadow-[inset_3px_0_0_#ff2299]' : 'border border-transparent text-gray-400 hover:bg-white/5 hover:text-white'}`}>
               <Icon className="h-5 w-5 shrink-0" />
               <span className={labelVisibility}>{tab.label}</span>
             </button>;
           })}
+          {section && <div className="stage-sidebar-current" aria-label="მიმდინარე განყოფილება">
+            <span className="stage-sidebar-current-label">მიმდინარე განყოფილება</span>
+            <span aria-current="page" title={collapsed ? sectionTitles[section] : undefined} className={`stage-sidebar-current-name ${collapsed ? 'lg:text-center' : ''}`}>{collapsed ? <span className="lg:hidden">{sectionTitles[section]}</span> : sectionTitles[section]}<span className={collapsed ? 'hidden lg:inline' : 'hidden'}>●</span></span>
+          </div>}
           <div className="my-4 border-t border-[#25252d]" />
           <button type="button" onClick={() => { onOpenAbout?.(); closeMobile(); }} aria-label="კავშირი" title={collapsed ? 'კავშირი' : undefined} className={`${itemClass} border border-transparent text-gray-400 hover:bg-white/5 hover:text-white`}>
             <MessageSquare className="h-5 w-5 shrink-0" /><span className={labelVisibility}>კავშირი</span>

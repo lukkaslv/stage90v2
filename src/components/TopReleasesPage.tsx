@@ -4,6 +4,8 @@ import { queryCatalog } from '@/lib/catalogQuery';
 import { normalizeCatalogRelease } from '@/lib/normalizeCatalogRelease';
 import type { Release } from '@/types/music';
 import ReleaseCard from '@/components/ReleaseCard';
+import PageHeading from '@/components/PageHeading';
+import SectionLoader from '@/components/SectionLoader';
 
 export default function TopReleasesPage({ onReleaseClick }: { onReleaseClick: (release: Release) => void }) {
   const [ranking, setRanking] = useState<string[]>([]);
@@ -59,11 +61,12 @@ export default function TopReleasesPage({ onReleaseClick }: { onReleaseClick: (r
   }, [ids]);
 
   return <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-    <h1 className="mb-7 text-3xl font-bold text-white">ყველა დროის ტოპ რელიზები</h1>
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
+    <PageHeading title="ყველა დროის ტოპ რელიზები" />
+    <div className="stage-catalog-grid grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
       {releases.map((release) => <ReleaseCard key={String(release.id)} release={release} onClick={onReleaseClick} />)}
     </div>
-    {ranking.length === 0 && !loading && !error && <p className="py-12 text-center text-gray-400">რელიზები ჯერ არ არის.</p>}
+    {loading && releases.length === 0 && <SectionLoader />}
+    {ranking.length === 0 && !loading && !error && <p className="stage-empty-state">რელიზები ჯერ არ არის.</p>}
     {error && <p className="py-5 text-center text-rose-300">მონაცემების ჩატვირთვა ვერ მოხერხდა.</p>}
     {ranking.length > limit && <button type="button" onClick={() => setLimit((current) => current + 20)} disabled={loading} className="mx-auto mt-8 block rounded-lg border border-blue-400/30 px-5 py-2 text-sm font-semibold text-blue-300 disabled:opacity-50">კიდევ 20 რელიზის ნახვა</button>}
   </main>;

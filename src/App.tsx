@@ -22,6 +22,8 @@ import { useAuth } from '@/context/auth-context';
 import { LoadingProvider, usePageLoading } from '@/context/LoadingContext';
 import PageLoader from '@/components/PageLoader';
 import MaintenancePlaceholder from '@/components/MaintenancePlaceholder';
+import PageHeading from '@/components/PageHeading';
+import SiteFooter from '@/components/SiteFooter';
 import { maintenanceMapFromRows, type MaintenanceMap, type MaintenanceRecord } from '@/lib/maintenance';
 
 type AuthMode = 'login' | 'register' | 'invite';
@@ -34,6 +36,7 @@ const ConcertsSection = lazy(() => import('@/components/ConcertsSection'));
 const AdminDashboard = lazy(() => import('@/components/AdminDashboard'));
 const PlatformAboutModal = lazy(() => import('@/components/PlatformAboutModal'));
 const FAQPage = lazy(() => import('@/components/FAQPage'));
+const ReactionOutput = lazy(() => import('@/components/ReactionOutput'));
 
 function pathState() {
   const path = window.location.pathname.replace(/\/$/, '') || '/';
@@ -41,7 +44,8 @@ function pathState() {
   const release = path.match(/^\/releases\/([^/]+)$/);
   const review = path.match(/^\/reviews\/([^/]+)$/);
   const tab = path === '/top-90' ? 'top90' : path === '/achievements' ? 'achievements' : path === '/concerts' ? 'concerts' : path === '/faq' ? 'faq' : 'releases';
-  return { section, release: release ? decodeURIComponent(release[1]) : null, review: review ? decodeURIComponent(review[1]) : null, tab: tab as PageId };
+  const known = path === '/' || Boolean(section || release || review) || Object.values(tabPaths).includes(path);
+  return { section, release: release ? decodeURIComponent(release[1]) : null, review: review ? decodeURIComponent(review[1]) : null, tab: tab as PageId, unknown: !known };
 }
 
 const tabPaths: Record<PageId, string> = { releases: '/', top90: '/top-90', achievements: '/achievements', concerts: '/concerts', faq: '/faq' };
@@ -56,6 +60,7 @@ function AppContent() {
   const [authMode, setAuthMode] = useState<AuthMode | null>(() => new URLSearchParams(window.location.search).has('stage90_invite') ? 'invite' : null);
   const [showAbout, setShowAbout] = useState(false);
   const [activeTab, setActiveTab] = useState<PageId>(() => pathState().tab);
+  const [unknownPath, setUnknownPath] = useState(() => pathState().unknown);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('stage90-sidebar-collapsed') === 'true');
   const [adminMode, setAdminMode] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -73,6 +78,7 @@ function AppContent() {
     setSelectedReview(next.review);
     setSection(next.section);
     setActiveTab(next.tab);
+    setUnknownPath(next.unknown);
     setAdminMode(false);
   };
   const openRelease = (nextRelease: Release | string) => { void startTransition(() => { setReleaseHistory([]); navigate(`/releases/${encodeURIComponent(String(typeof nextRelease === 'string' ? nextRelease : nextRelease.id))}`); setSelectedRelease(nextRelease); }); };
@@ -167,6 +173,7 @@ function AppContent() {
       setSelectedReview(next.review);
       setSection(next.section);
       setActiveTab(next.tab);
+      setUnknownPath(next.unknown);
       setAdminMode(false);
     };
     window.addEventListener('popstate', onPop);
@@ -195,6 +202,7 @@ function AppContent() {
             onOpenAuth={() => setAuthMode('login')}
             onReviewSubmitted={onReviewSubmitted}
           /></Suspense>}
+        <SiteFooter onFaq={() => handleTabChange('faq')} onAbout={() => setShowAbout(true)} />
         {authMode && (
           <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>
         )}
@@ -209,6 +217,7 @@ function AppContent() {
       <div className={contentClass}>
       {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
       <ReviewDetail id={selectedReview} onReleaseClick={openRelease} onBack={returnFromRelease} />
+      <SiteFooter onFaq={() => handleTabChange('faq')} onAbout={() => setShowAbout(true)} />
       {authMode && <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>}
       </div>
     </div>;
@@ -216,16 +225,17 @@ function AppContent() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0c]">
-      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} onTabChange={handleTabChange} onOpenRelease={openRelease} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} section={section} unknownPath={unknownPath} onTabChange={handleTabChange} onOpenRelease={openRelease} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
       <div className={contentClass}>
       {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
       {adminMode && user?.role === 'admin' ? <Suspense fallback={<SectionLoader />}><AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /></Suspense> : null}
 
-      {!adminMode && maintenanceMap[activeTab]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[activeTab].tab_title} customMessage={maintenanceMap[activeTab].message_geo} />}
-      {!adminMode && section && !maintenanceMap.releases?.is_maintenance && (section === 'top-releases'
+      {!adminMode && unknownPath && <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><PageHeading title="გვერდი ვერ მოიძებნა" description="მითითებულ მისამართზე გვერდი არ არსებობს." /><button type="button" onClick={() => handleTabChange('releases')} className="stage-outline-action">მთავარ გვერდზე დაბრუნება →</button></main>}
+      {!adminMode && !unknownPath && maintenanceMap[activeTab]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[activeTab].tab_title} customMessage={maintenanceMap[activeTab].message_geo} />}
+      {!adminMode && !unknownPath && section && !maintenanceMap.releases?.is_maintenance && (section === 'top-releases'
         ? <TopReleasesPage onReleaseClick={openRelease} />
         : section === 'daily-top-15'
-          ? <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><Top15Daily onReleaseClick={openRelease} /></main>
+          ? <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><PageHeading title="ბოლო 24 საათის ტოპ-15" /><Top15Daily onReleaseClick={openRelease} /></main>
           : <SectionPage key={section} section={section} onReleaseClick={openRelease} onReviewClick={openReview} />)}
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'top90' && <Suspense fallback={<SectionLoader />}><Top90Leaderboard /></Suspense>}
 
@@ -233,13 +243,14 @@ function AppContent() {
 
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'concerts' && (
         <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
+          <PageHeading title="კონცერტები, ტურები და ფესტივალები" />
           <Suspense fallback={<SectionLoader />}><ConcertsSection /></Suspense>
         </main>
       )}
 
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'faq' && <Suspense fallback={<SectionLoader />}><FAQPage /></Suspense>}
 
-      {!adminMode && !section && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'releases' && (
+      {!adminMode && !unknownPath && !section && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'releases' && (
         <>
           <section className="stage-hero" aria-labelledby="stage-hero-title">
             <div className="stage-hero-photo" aria-hidden="true" />
@@ -321,21 +332,7 @@ function AppContent() {
         </>
       )}
 
-      {/* Footer */}
-      <footer className="border-t border-[#1e1e24]">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-          <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-            <p className="hidden text-xs text-gray-600">
-              © 2026 რზტ — რისა ზა თვორჩესტვო. ყველა უფლება დაცულია.
-            </p>
-            <p className="text-xs text-gray-600">© 2026 #STAGE90. ეს არის კავშირი. ყველა უფლება დაცულია.</p>
-            <div className="flex items-center gap-4 text-xs text-gray-600">
-              <button type="button" onClick={() => handleTabChange('faq')} className="transition-colors hover:text-white">წესები და კითხვები</button>
-              <button type="button" onClick={() => setShowAbout(true)} className="transition-colors hover:text-white">კავშირი</button>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter onFaq={() => handleTabChange('faq')} onAbout={() => setShowAbout(true)} />
 
       {authMode && (
         <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>
@@ -346,5 +343,6 @@ function AppContent() {
 }
 
 export default function App() {
+  if (window.location.pathname === '/studio/obs') return <Suspense fallback={null}><ReactionOutput /></Suspense>;
   return <LoadingProvider><AuthProvider><AppContent /></AuthProvider><PageLoader /></LoadingProvider>;
 }

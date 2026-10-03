@@ -14,6 +14,7 @@ import {
   Award,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import PageHeading from '@/components/PageHeading';
 
 interface LeaderboardUser {
   rank: number;
@@ -188,18 +189,9 @@ export default function Top90Leaderboard() {
   }, []);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 animate-fade-in">
+    <main className="stage-leaderboard mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 animate-fade-in">
       {/* Header */}
-      <div className="mb-6">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-blue-400/10">
-            <Trophy className="h-5 w-5 text-blue-400" />
-          </span>
-          <h1 className="text-2xl font-bold text-white sm:text-3xl">ტოპ-90 საზოგადოების ქულებით</h1>
-        </div>
-      </div>
-
-      <p className="mb-8 text-sm text-gray-400">ყველა დრო · საზოგადოების ქულები</p>
+      <PageHeading title="ტოპ-90 საზოგადოების ქულებით" description="ყველა დრო · საზოგადოების ქულები" />
 
       {/* Main layout: leaderboard + stats sidebar */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
@@ -295,6 +287,6 @@ export default function Top90Leaderboard() {
           </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import RoleBadge from '@/components/RoleBadge';
+import SectionLoader from '@/components/SectionLoader';
 
 interface Props { id: string; onReleaseClick: (id: string) => void; onBack: () => void; }
 type Row = Record<string, unknown>;
@@ -21,9 +22,9 @@ export default function ReviewDetail({ id, onReleaseClick, onBack }: Props) {
   }, [id]);
   const profile = joined(review?.profiles);
   const release = joined(review?.releases);
-  return <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
+  return <main className="stage-review-detail mx-auto max-w-4xl px-4 py-10 sm:px-6">
     <button type="button" onClick={onBack} className="mb-6 text-sm text-blue-300">← უკან დაბრუნება</button>
-    {loading ? <p className="text-gray-400">იტვირთება...</p> : !review ? <p className="text-gray-400">რეცენზია ვერ მოიძებნა.</p> : <article className="rounded-2xl border border-[#24242c] bg-[#121215] p-6">
+    {loading ? <SectionLoader /> : !review ? <p className="stage-empty-state">რეცენზია ვერ მოიძებნა.</p> : <article className="stage-review-detail-card p-6 sm:p-8">
       <div className="mb-5 flex items-center gap-2 text-sm text-gray-300">
         <span className="font-semibold">{String(profile?.display_name ?? 'მომხმარებელი')}</span>
         {profile && <RoleBadge role={String(profile.role ?? 'user')} category={String(profile.author_category ?? '')} isVerified={Boolean(profile.is_verified)} />}

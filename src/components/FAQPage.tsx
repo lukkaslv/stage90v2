@@ -1,5 +1,6 @@
-import { CalendarDays, ChevronDown, CircleHelp, Disc3, ListMusic, Sparkles } from 'lucide-react';
+import { CalendarDays, ChevronDown, CircleHelp, Disc3, ListMusic } from 'lucide-react';
 import type { ReactNode } from 'react';
+import PageHeading from '@/components/PageHeading';
 
 interface Question {
   question: string;
@@ -111,25 +112,16 @@ const groups: QuestionGroup[] = [
 
 export default function FAQPage() {
   return (
-    <main className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_at_top,rgba(34,211,238,0.09),transparent_60%)]" aria-hidden="true" />
-      <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 sm:pt-16 lg:px-8">
-        <div className="mb-12 max-w-3xl sm:mb-16">
-          <span className="inline-flex items-center gap-2 rounded-full border border-blue-400/20 bg-blue-400/5 px-3 py-1 text-xs font-semibold text-blue-300">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-            ყველაფერი Stage 90-ის შესახებ
-          </span>
-          <h1 className="mt-6 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">ხშირად დასმული <span className="text-blue-300">კითხვები</span></h1>
-          <p className="mt-5 max-w-2xl text-base leading-8 text-gray-400">პასუხები პლატფორმაზე, შეფასებაზე, რეიტინგებსა და ღონისძიებებზე.</p>
-          <div className="mt-8 h-px w-full bg-gradient-to-r from-blue-400/50 via-pink-400/30 to-transparent" />
-        </div>
+    <main className="stage-faq-page">
+      <div className="mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 lg:px-8">
+        <PageHeading title="ხშირად დასმული კითხვები" description="პასუხები პლატფორმაზე, შეფასებაზე, რეიტინგებსა და ღონისძიებებზე." />
 
         <div className="grid gap-10 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-14">
           <nav aria-label="კითხვების თემები" className="lg:sticky lg:top-36 lg:self-start">
             <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-gray-500">თემები</p>
             <div className="flex flex-wrap gap-2 lg:flex-col">
               {groups.map((group, index) => (
-                <a key={group.id} href={`#${group.id}`} className="inline-flex items-center gap-3 rounded-lg border border-[#272730] bg-[#121215] px-3 py-2.5 text-sm text-gray-300 transition-colors hover:border-blue-400/40 hover:bg-blue-400/5 hover:text-blue-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 lg:w-full">
+                <a key={group.id} href={`#${group.id}`} className="stage-faq-link inline-flex items-center gap-3 px-3 py-2.5 text-sm text-gray-300 lg:w-full">
                   <span className="font-mono text-xs text-blue-400/70">{String(index + 1).padStart(2, '0')}</span>
                   {group.title}
                 </a>
@@ -154,8 +146,8 @@ export default function FAQPage() {
                   </div>
                   <div className="space-y-3">
                     {group.questions.map(({ question, answer }, index) => (
-                      <details key={question} className="group rounded-xl border border-[#292932] bg-[#121215] transition-colors open:border-blue-400/35 open:bg-[#15191d]">
-                        <summary className="flex cursor-pointer list-none items-center gap-4 rounded-xl px-5 py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-400 sm:px-6 [&::-webkit-details-marker]:hidden">
+                      <details key={question} className="stage-faq-question group">
+                        <summary className="flex cursor-pointer list-none items-center gap-4 px-5 py-5 text-left sm:px-6 [&::-webkit-details-marker]:hidden">
                           <span className="shrink-0 font-mono text-xs text-gray-600 group-open:text-blue-400/70">{String(index + 1).padStart(2, '0')}</span>
                           <span className="min-w-0 flex-1 text-sm font-semibold leading-6 text-gray-100 sm:text-base">{question}</span>
                           <ChevronDown className="h-5 w-5 shrink-0 text-gray-500 transition-transform group-open:rotate-180 group-open:text-blue-300" aria-hidden="true" />
