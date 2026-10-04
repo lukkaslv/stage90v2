@@ -49,11 +49,11 @@ begin
       from public.releases
       where is_active = true and overall_score > 0
     )
-    select coalesce(old.release_id, current_ranks.release_id) as release_id,
-      old.rank as previous_rank, current_ranks.rank as new_rank
-    from public.release_rank_live_state old
+    select coalesce(previous_state.release_id, current_ranks.release_id) as release_id,
+      previous_state.rank as previous_rank, current_ranks.rank as new_rank
+    from public.release_rank_live_state previous_state
     full join current_ranks using (release_id)
-    where old.rank is distinct from current_ranks.rank
+    where previous_state.rank is distinct from current_ranks.rank
   loop
     insert into public.release_rank_live_events (release_id, previous_rank, new_rank)
     values (changed.release_id, changed.previous_rank, changed.new_rank);

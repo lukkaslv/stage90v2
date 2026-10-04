@@ -61,14 +61,17 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
         {loading && top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგი იტვირთება...</p>
           : error && top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p>
             : top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">შეფასებული აქტიური რელიზები ჯერ არ არის.</p>
-              : <ol className="reaction-top-list grid min-h-0 flex-1" data-density={topRows === 1 ? 'spacious' : 'compact'} style={{ gridTemplateColumns: `repeat(${topColumns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${topRows}, minmax(0, 1fr))` }}>
+              : <ol className="reaction-top-list grid min-h-0 flex-1" data-density={visibleTop.length <= 2 ? 'hero' : topRows === 1 ? 'spacious' : topColumns > 5 ? 'dense' : 'compact'} style={{ gridTemplateColumns: `repeat(${topColumns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${topRows}, minmax(0, 1fr))` }}>
                 {visibleTop.map((rankedRelease, index) => {
                   const tier = releaseValueTier(rankedRelease);
-                  return <li key={String(rankedRelease.id)} data-tier={tier ?? undefined} aria-label={`${index + 1}. ${rankedRelease.title}, ${tier ?? ''}, ${rankedRelease.overall_score} ქულა 90-დან`} className={`reaction-top-item flex min-w-0 items-center ${String(rankedRelease.id) === String(currentTopReleaseId) ? 'reaction-top-item-current' : ''}`}>
+                  const rankMovement = movement[String(rankedRelease.id)];
+                  const previousRank = rankMovement?.liveChangedAt != null ? rankMovement.livePreviousRank : rankMovement?.previousRank;
+                  const newLeader = index === 0 && Boolean(rankMovement?.hasPrevious || rankMovement?.liveChangedAt) && (previousRank == null || previousRank > 1);
+                  return <li key={String(rankedRelease.id)} data-tier={tier ?? undefined} aria-label={`${index + 1}. ${rankedRelease.title}, ${tier ?? ''}, ${rankedRelease.overall_score} ქულა 90-დან${newLeader ? ', ახალი ლიდერი' : ''}`} className={`reaction-top-item flex min-w-0 items-center ${String(rankedRelease.id) === String(currentTopReleaseId) ? 'reaction-top-item-current' : ''}`}>
                     <span className="reaction-rank shrink-0 font-black tabular-nums">{String(index + 1).padStart(2, '0')}</span>
                     {rankedRelease.coverUrl ? <img src={rankedRelease.coverUrl} alt="" className="reaction-top-cover aspect-square shrink-0 object-cover" /> : <Music2 className="reaction-top-cover shrink-0 text-gray-500" />}
-                    <span className="reaction-top-copy min-w-0"><strong className="text-white">{rankedRelease.title}</strong><span className="reaction-supporting block truncate">{rankedRelease.overall_score}/90 ქულა</span></span>
-                    <RankMovementBadge rank={index + 1} movement={movement[String(rankedRelease.id)]} compact micro={topColumns > 5} />
+                    <span className="reaction-top-copy min-w-0">{newLeader && <span className="reaction-top-leader-label">ახალი ლიდერი</span>}<strong className="text-white">{rankedRelease.title}</strong><span className="reaction-supporting block truncate">{rankedRelease.overall_score}/90</span></span>
+                    {!newLeader && <RankMovementBadge rank={index + 1} movement={rankMovement} compact micro={topColumns > 5} />}
                   </li>;
                 })}
               </ol>}
