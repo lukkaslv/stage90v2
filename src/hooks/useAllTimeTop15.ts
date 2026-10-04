@@ -18,6 +18,12 @@ interface ChartMetaRow {
   first_date: string | null;
 }
 
+interface LiveChangeRow {
+  release_id: string;
+  previous_rank: number | null;
+  changed_at: string;
+}
+
 export interface RankMovement {
   previousRank: number | null;
   hasPrevious: boolean;
@@ -25,6 +31,8 @@ export interface RankMovement {
   baselineDate: string | null;
   firstRank: number | null;
   firstDate: string | null;
+  livePreviousRank: number | null;
+  liveChangedAt: string | null;
 }
 
 export interface WeeklyRankedRelease {
@@ -50,7 +58,7 @@ export function useAllTimeTop15() {
 
     const load = async () => {
       const current = ++request;
-      const [catalog, chart] = await Promise.all([
+      const [catalog, chart, liveChanges] = await Promise.all([
         queryCatalog((columns) => client.from('releases')
           .select(columns)
           .eq('is_active', true)
@@ -60,6 +68,7 @@ export function useAllTimeTop15() {
           .limit(15)
           .returns<Record<string, unknown>[]>()),
         client.rpc('top15_chart_meta'),
+        client.rpc('top15_live_changes'),
       ]);
       if (cancelled || current !== request) return;
 
@@ -74,8 +83,14 @@ export function useAllTimeTop15() {
       }
 
       const rows = chart.data as ChartMetaRow[];
+      const liveByRelease = new Map<string, LiveChangeRow>(
+        Array.isArray(liveChanges.data)
+          ? (liveChanges.data as LiveChangeRow[]).map((row) => [row.release_id, row])
+          : [],
+      );
       const nextMovement: Record<string, RankMovement> = {};
       rows.filter((row) => row.chart === 'all_time').forEach((row) => {
+        const live = liveByRelease.get(row.release_id);
         nextMovement[row.release_id] = {
           previousRank: row.previous_rank,
           hasPrevious: row.has_previous,
@@ -83,6 +98,8 @@ export function useAllTimeTop15() {
           baselineDate: row.baseline_date,
           firstRank: row.first_rank,
           firstDate: row.first_date,
+          livePreviousRank: live?.previous_rank ?? null,
+          liveChangedAt: live?.changed_at ?? null,
         };
       });
       setMovement(nextMovement);
