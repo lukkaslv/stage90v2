@@ -89,12 +89,22 @@ body {
 .reaction-top-state.text-amber-300 { color: #fcd34d; }
 .reaction-top-heading > .reaction-supporting { font-size: .75cqw; }
 .reaction-top-state { font-size: 1cqw; }
-.reaction-top-list { gap: .45cqw; }
-.reaction-top-item { gap: .35cqw; border: 1px solid #393c45; background: var(--bg-card); padding: .35cqw; font-size: .74cqw; line-height: 1.25; }
-.reaction-top-item-current { border-color: #6589ff; background: #1d2d60; box-shadow: inset .16cqw 0 var(--pink); }
-.reaction-rank { color: #f5f5f5; font-family: 'Archivo Black', 'Noto Sans Georgian', sans-serif; font-size: .9cqw; letter-spacing: -.04em; }
-.reaction-top-cover { width: 2.6cqw; height: 2.6cqw; }
-.reaction-top-item .reaction-supporting { margin-top: .22cqw; font-size: .65cqw; }
+.reaction-top-list { gap: .48cqw; padding: .16cqw .32cqw .32cqw; }
+.reaction-top-item { --tier-rgb: 189, 196, 205; position: relative; isolation: isolate; gap: .35cqw; overflow: hidden; border: 1px solid rgba(var(--tier-rgb), .9); border-radius: .2cqw; background: radial-gradient(circle at 8% 35%, rgba(var(--tier-rgb), .25), transparent 63%), linear-gradient(135deg, #25252b, #101116 82%); box-shadow: inset 0 0 0 1px rgba(var(--tier-rgb), .22), 0 0 .45cqw rgba(var(--tier-rgb), .55), 0 0 .9cqw rgba(var(--tier-rgb), .3); padding: .35cqw .4cqw .35cqw .5cqw; font-size: .74cqw; line-height: 1.25; }
+.reaction-top-item[data-tier="ვერცხლი"] { --tier-rgb: 189, 196, 205; }
+.reaction-top-item[data-tier="ოქრო"] { --tier-rgb: 216, 187, 120; }
+.reaction-top-item[data-tier="ზურმუხტი"] { --tier-rgb: 131, 190, 161; }
+.reaction-top-item[data-tier="საფირონი"] { --tier-rgb: 145, 171, 199; }
+.reaction-top-item[data-tier="ლალი"] { --tier-rgb: 222, 128, 144; }
+.reaction-top-item::before { content: ''; position: absolute; inset: 0 auto 0 0; width: .18cqw; background: rgb(var(--tier-rgb)); box-shadow: 0 0 .55cqw .1cqw rgba(var(--tier-rgb), .8); }
+.reaction-top-item::after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none; background: linear-gradient(110deg, transparent 20%, rgba(var(--tier-rgb), .25) 55%, transparent 95%); opacity: .35; animation: reaction-tier-glow 4.2s ease-in-out infinite alternate; }
+.reaction-top-item:nth-child(3n)::after { animation-delay: -2.1s; }
+.reaction-top-item > * { position: relative; z-index: 1; }
+.reaction-top-item-current { outline: .1cqw solid #fff; outline-offset: -.1cqw; box-shadow: inset 0 0 0 1px rgba(var(--tier-rgb), .45), 0 0 .65cqw rgba(var(--tier-rgb), .85), 0 0 1.2cqw rgba(var(--tier-rgb), .5); }
+.reaction-rank { color: rgb(var(--tier-rgb)); font-family: 'Archivo Black', 'Noto Sans Georgian', sans-serif; font-size: .9cqw; letter-spacing: -.04em; text-shadow: 0 0 .4cqw rgba(var(--tier-rgb), .85); }
+.reaction-top-cover { width: 2.6cqw; height: 2.6cqw; border: 1px solid rgba(var(--tier-rgb), .75); box-shadow: 0 0 .35cqw rgba(var(--tier-rgb), .55); }
+.reaction-top-item .reaction-supporting { margin-top: .22cqw; color: rgb(var(--tier-rgb)); font-size: .65cqw; font-weight: 800; }
+@keyframes reaction-tier-glow { from { opacity: .25; } to { opacity: .8; } }
 .reaction-video { border-right: 1px solid var(--border); background: var(--bg); padding: 2cqw 1.5cqw 1.7cqw; }
 .reaction-video-heading { min-height: 4.2cqw; margin-bottom: 1.3cqw; }
 .reaction-artist { color: #ff80c2; font-size: 1.05cqw; }

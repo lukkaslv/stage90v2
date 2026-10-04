@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Check, Copy, ExternalLink, Eye, EyeOff, Music2, Radio, RotateCcw, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { computeRZTScore, RZT_PARAMS, VIBE_LEVELS } from '@/types/music';
-import { useDailyTop15 } from '@/hooks/useDailyTop15';
+import { useAllTimeTop15 } from '@/hooks/useAllTimeTop15';
 import { reactionOutputUrl, reactionStorageKey, type ReactionScene, type ReactionSession, type ReactionView } from '@/lib/reactionStudio';
 import { youtubeEmbedUrl } from '@/lib/youtubeEmbed';
 import ReactionCanvas from '@/components/ReactionCanvas';
@@ -17,7 +17,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   const [draftVibe, setDraftVibe] = useState(3);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const { top, loading: topLoading, error: topError } = useDailyTop15();
+  const { top, loading: topLoading, error: topError } = useAllTimeTop15();
   const activeReleases = releases.filter((row) => row.is_active === true && row.parent_id == null);
   const selectedRelease = activeReleases.find((row) => String(row.id) === selectedReleaseId);
   const selectedTrack = view?.track_id ? releases.find((row) => String(row.id) === view.track_id) : null;
@@ -150,8 +150,8 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     </div>
 
     <div className="border border-[#343844] bg-[#12151d] p-4">
-      <div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-bold text-white">ბოლო 24 საათის ტოპ-15</h3><p className="text-xs text-gray-500">ადგილი განისაზღვრება შეფასებების რაოდენობით</p></div><span className="text-xs text-gray-500">{top.length}/15</span></div>
-      {topLoading && top.length === 0 ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : topError && top.length === 0 ? <p className="py-5 text-sm text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : top.length === 0 ? <p className="py-5 text-sm text-gray-400">დღის აქტიური რელიზები ჯერ არ არის.</p> : <div className="flex gap-2 overflow-x-auto pb-2">{top.map(({ release, dailyCount }, index) => <button key={String(release.id)} type="button" onClick={() => void changeRelease(String(release.id))} disabled={busy} aria-pressed={selectedReleaseId === String(release.id)} className={`flex w-48 shrink-0 items-center gap-2 border p-2 text-left transition-colors disabled:opacity-50 ${selectedReleaseId === String(release.id) ? 'border-blue-400 bg-blue-400/15' : 'border-[#343844] bg-[#191d27] hover:border-blue-400/50'}`}><span className="text-sm font-black text-blue-300">{String(index + 1).padStart(2, '0')}</span>{release.coverUrl ? <img src={release.coverUrl} alt="" className="h-10 w-10 shrink-0 object-cover" /> : <Music2 className="h-10 w-10 shrink-0 p-2 text-gray-500" />}<span className="min-w-0"><span className="block truncate text-xs font-bold text-white">{release.title}</span><span className="block truncate text-[11px] text-gray-400">{dailyCount} შეფასება</span></span></button>)}</div>}
+      <div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-bold text-white">ყველა დროის ტოპ-15 ქულებით</h3><p className="text-xs text-gray-500">ადგილი განისაზღვრება საერთო ქულით</p></div><span className="text-xs text-gray-500">{top.length}/15</span></div>
+      {topLoading && top.length === 0 ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : topError && top.length === 0 ? <p className="py-5 text-sm text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : top.length === 0 ? <p className="py-5 text-sm text-gray-400">შეფასებული აქტიური რელიზები ჯერ არ არის.</p> : <div className="flex gap-2 overflow-x-auto pb-2">{top.map((release, index) => <button key={String(release.id)} type="button" onClick={() => void changeRelease(String(release.id))} disabled={busy} aria-pressed={selectedReleaseId === String(release.id)} className={`flex w-48 shrink-0 items-center gap-2 border p-2 text-left transition-colors disabled:opacity-50 ${selectedReleaseId === String(release.id) ? 'border-blue-400 bg-blue-400/15' : 'border-[#343844] bg-[#191d27] hover:border-blue-400/50'}`}><span className="text-sm font-black text-blue-300">{String(index + 1).padStart(2, '0')}</span>{release.coverUrl ? <img src={release.coverUrl} alt="" className="h-10 w-10 shrink-0 object-cover" /> : <Music2 className="h-10 w-10 shrink-0 p-2 text-gray-500" />}<span className="min-w-0"><span className="block truncate text-xs font-bold text-white">{release.title}</span><span className="block truncate text-[11px] text-gray-400">{release.overall_score}/90 ქულა</span></span></button>)}</div>}
     </div>
 
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)]">

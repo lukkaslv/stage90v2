@@ -21,16 +21,19 @@ export default function TopReleasesPage({ onReleaseClick }: { onReleaseClick: (r
     let version = 0;
     const loadRanking = async () => {
       const current = ++version;
-      const counts: { id: string; count: number }[] = [];
+      const rankedIds: string[] = [];
       for (let from = 0; ; from += 500) {
-        const { data, error: cause } = await client.from('releases').select('id, reviews(count)')
-          .eq('is_active', true).order('id').range(from, from + 499);
+        const { data, error: cause } = await client.from('releases').select('id')
+          .eq('is_active', true).gt('overall_score', 0)
+          .order('overall_score', { ascending: false })
+          .order('id', { ascending: true }).range(from, from + 499);
         if (cancelled || current !== version) return;
         if (cause || !data) { setError(true); setLoading(false); return; }
-        data.forEach((row) => counts.push({ id: String(row.id), count: Number(row.reviews[0]?.count ?? 0) }));
+        data.forEach((row) => rankedIds.push(String(row.id)));
         if (data.length < 500) break;
       }
-      setRanking(counts.sort((a, b) => b.count - a.count || a.id.localeCompare(b.id)).map(({ id }) => id));
+      setRanking(rankedIds);
+      setError(false);
       setLoading(false);
     };
     void loadRanking();
@@ -61,12 +64,12 @@ export default function TopReleasesPage({ onReleaseClick }: { onReleaseClick: (r
   }, [ids]);
 
   return <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-    <PageHeading title="ყველა დროის ტოპ რელიზები" />
+    <PageHeading title="ყველა დროის ტოპ რელიზები ქულებით" />
     <div className="stage-catalog-grid grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
       {releases.map((release) => <ReleaseCard key={String(release.id)} release={release} onClick={onReleaseClick} />)}
     </div>
     {loading && releases.length === 0 && <SectionLoader />}
-    {ranking.length === 0 && !loading && !error && <p className="stage-empty-state">რელიზები ჯერ არ არის.</p>}
+    {ranking.length === 0 && !loading && !error && <p className="stage-empty-state">შეფასებული აქტიური რელიზები ჯერ არ არის.</p>}
     {error && <p className="py-5 text-center text-rose-300">მონაცემების ჩატვირთვა ვერ მოხერხდა.</p>}
     {ranking.length > limit && <button type="button" onClick={() => setLimit((current) => current + 20)} disabled={loading} className="mx-auto mt-8 block rounded-lg border border-blue-400/30 px-5 py-2 text-sm font-semibold text-blue-300 disabled:opacity-50">კიდევ 20 რელიზის ნახვა</button>}
   </main>;

@@ -6,7 +6,7 @@ import TopCarousel from '@/components/TopCarousel';
 import ReleaseCard from '@/components/ReleaseCard';
 import MediaReviews from '@/components/MediaReviews';
 import RecentReviewsFeed from '@/components/RecentReviewsFeed';
-import Top15Daily from '@/components/Top15Daily';
+import Top15AllTime from '@/components/Top15AllTime';
 import AuthorsPicks from '@/components/AuthorsPicks';
 import AuthorComments from '@/components/AuthorComments';
 import NewNamesSection from '@/components/NewNamesSection';
@@ -234,8 +234,8 @@ function AppContent() {
       {!adminMode && !unknownPath && maintenanceMap[activeTab]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[activeTab].tab_title} customMessage={maintenanceMap[activeTab].message_geo} />}
       {!adminMode && !unknownPath && section && !maintenanceMap.releases?.is_maintenance && (section === 'top-releases'
         ? <TopReleasesPage onReleaseClick={openRelease} />
-        : section === 'daily-top-15'
-          ? <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><PageHeading title="ბოლო 24 საათის ტოპ-15" /><Top15Daily onReleaseClick={openRelease} /></main>
+        : section === 'score-top-15'
+          ? <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><PageHeading title="ყველა დროის ტოპ-15 ქულებით" /><Top15AllTime onReleaseClick={openRelease} /></main>
           : <SectionPage key={section} section={section} onReleaseClick={openRelease} onReviewClick={openReview} />)}
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'top90' && <Suspense fallback={<SectionLoader />}><Top90Leaderboard /></Suspense>}
 
@@ -273,8 +273,8 @@ function AppContent() {
           {/* Main content */}
           <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
             <div className="space-y-2">
-              <button type="button" onClick={() => openSection('daily-top-15')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
-              <Top15Daily onReleaseClick={openRelease} preview />
+              <button type="button" onClick={() => openSection('score-top-15')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
+              <Top15AllTime onReleaseClick={openRelease} preview />
             </div>
 
             <div className="space-y-2">

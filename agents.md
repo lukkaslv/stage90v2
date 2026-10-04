@@ -17,7 +17,7 @@
 - Allowed Roles: `'user' | 'author' | 'media' | 'admin'` (stored in `public.profiles.role`).
 - Author Categories: `'artist' | 'producer' | 'sound_engineer' | 'designer' | 'videomaker'`.
 - Badges: Managed strictly via `@/components/RoleBadge.tsx`. Do not hardcode ad-hoc role pill markup in review or comment cards.
-- Media Limit: Media users can submit up to 5 releases per month (`media_monthly_releases` counter in `public.profiles`).
+- Media Releases: Media users can submit releases without a monthly quota.
 - Admin Scope: Complete CRUD access across releases, reviews, concerts, verification statuses, and maintenance toggles (`platform_settings`).
 
 ## 4. Token Preservation Rules (Codex / Trae / Cursor)

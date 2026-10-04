@@ -11,7 +11,6 @@ export interface User {
   displayName: string;
   isVerified: boolean;
   authorCategory?: string;
-  mediaMonthlyReleases: number;
 }
 
 interface ProfileInput {
@@ -33,7 +32,6 @@ function profileToUser(profile: Record<string, unknown> | null, session: Session
     displayName,
     isVerified: Boolean(profile?.is_verified ?? false),
     authorCategory: profile?.author_category ? String(profile.author_category) : undefined,
-    mediaMonthlyReleases: Number(profile?.media_monthly_releases ?? 0),
   };
 }
 
