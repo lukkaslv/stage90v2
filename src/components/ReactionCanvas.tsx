@@ -42,6 +42,9 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
   const videoUrl = trackVideo ?? youtubeEmbedUrl(releaseVideo ?? fallbackVideos[releaseId]);
   const videoTitle = trackVideo ? selectedTrack?.title : release.title;
   const videoArtist = trackVideo ? selectedTrack?.artist_name : release.artist_name;
+  const visibleTop = top.slice(0, 15);
+  const topColumns = visibleTop.length <= 5 ? Math.max(visibleTop.length, 1) : visibleTop.length === 6 ? 3 : visibleTop.length <= 10 ? 5 : 8;
+  const topRows = Math.ceil(visibleTop.length / topColumns);
 
   return <div className="reaction-canvas relative aspect-video w-full overflow-hidden text-white">
     <div className="reaction-canvas-content absolute inset-y-0 left-0 flex w-[72%] flex-col overflow-hidden">
@@ -53,13 +56,13 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
         {loading && top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგი იტვირთება...</p>
           : error && top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p>
             : top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">შეფასებული აქტიური რელიზები ჯერ არ არის.</p>
-              : <ol className="reaction-top-list grid min-h-0 flex-1 grid-cols-8 grid-rows-2">
-                {top.slice(0, 15).map((rankedRelease, index) => {
+              : <ol className="reaction-top-list grid min-h-0 flex-1" data-density={topRows === 1 ? 'spacious' : 'compact'} style={{ gridTemplateColumns: `repeat(${topColumns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${topRows}, minmax(0, 1fr))` }}>
+                {visibleTop.map((rankedRelease, index) => {
                   const tier = releaseValueTier(rankedRelease);
                   return <li key={String(rankedRelease.id)} data-tier={tier ?? undefined} aria-label={`${index + 1}. ${rankedRelease.title}, ${tier ?? ''}, ${rankedRelease.overall_score} ქულა 90-დან`} className={`reaction-top-item flex min-w-0 items-center ${String(rankedRelease.id) === String(currentTopReleaseId) ? 'reaction-top-item-current' : ''}`}>
                     <span className="reaction-rank shrink-0 font-black tabular-nums">{String(index + 1).padStart(2, '0')}</span>
                     {rankedRelease.coverUrl ? <img src={rankedRelease.coverUrl} alt="" className="reaction-top-cover aspect-square shrink-0 object-cover" /> : <Music2 className="reaction-top-cover shrink-0 text-gray-500" />}
-                    <span className="min-w-0"><strong className="block truncate text-white">{rankedRelease.title}</strong><span className="reaction-supporting block truncate">{rankedRelease.overall_score}/90 ქულა</span></span>
+                    <span className="min-w-0"><strong className="text-white">{rankedRelease.title}</strong><span className="reaction-supporting block truncate">{rankedRelease.overall_score}/90 ქულა</span></span>
                   </li>;
                 })}
               </ol>}
