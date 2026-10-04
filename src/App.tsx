@@ -71,6 +71,7 @@ function AppContent() {
   const addedReleasesDragStartRef = useRef({ x: 0, scrollLeft: 0 });
   const topCatalog = topReleases;
   const latestCatalog = latestReleases;
+  const homeSectionVisible = (id: SectionId | 'home-hero') => !maintenanceMap[id]?.is_maintenance;
   const navigate = (path: string) => {
     if (window.location.pathname !== path) window.history.pushState({ stage90: true }, '', path);
     const next = pathState();
@@ -232,10 +233,11 @@ function AppContent() {
 
       {!adminMode && unknownPath && <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><PageHeading title="გვერდი ვერ მოიძებნა" description="მითითებულ მისამართზე გვერდი არ არსებობს." /><button type="button" onClick={() => handleTabChange('releases')} className="stage-outline-action">მთავარ გვერდზე დაბრუნება →</button></main>}
       {!adminMode && !unknownPath && maintenanceMap[activeTab]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[activeTab].tab_title} customMessage={maintenanceMap[activeTab].message_geo} />}
-      {!adminMode && !unknownPath && section && !maintenanceMap.releases?.is_maintenance && (section === 'top-releases'
+      {!adminMode && !unknownPath && section && !maintenanceMap.releases?.is_maintenance && maintenanceMap[section]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[section].tab_title} customMessage={maintenanceMap[section].message_geo} />}
+      {!adminMode && !unknownPath && section && !maintenanceMap.releases?.is_maintenance && !maintenanceMap[section]?.is_maintenance && (section === 'top-releases'
         ? <TopReleasesPage onReleaseClick={openRelease} />
         : section === 'score-top-15'
-          ? <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><PageHeading title="ყველა დროის ტოპ-15 ქულებით" /><Top15AllTime onReleaseClick={openRelease} /></main>
+          ? <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><PageHeading title="ტოპ-15 ქულებით" /><Top15AllTime onReleaseClick={openRelease} /></main>
           : <SectionPage key={section} section={section} onReleaseClick={openRelease} onReviewClick={openReview} />)}
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'top90' && <Suspense fallback={<SectionLoader />}><Top90Leaderboard /></Suspense>}
 
@@ -252,7 +254,7 @@ function AppContent() {
 
       {!adminMode && !unknownPath && !section && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'releases' && (
         <>
-          <section className="stage-hero" aria-labelledby="stage-hero-title">
+          {homeSectionVisible('home-hero') && <section className="stage-hero" aria-labelledby="stage-hero-title">
             <div className="stage-hero-photo" aria-hidden="true" />
             <div className="stage-hero-inner mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
               <p className="stage-eyebrow"><span className="stage-live-dot" /> ქართული მუსიკის სცენა</p>
@@ -268,33 +270,33 @@ function AppContent() {
                 <div><Award aria-hidden="true" /><strong>90</strong><span>ქულიანი სისტემა</span></div>
               </div>
             </div>
-          </section>
+          </section>}
 
           {/* Main content */}
           <main className="mx-auto max-w-7xl space-y-12 px-4 py-10 sm:px-6 lg:px-8">
-            <div className="space-y-2">
+            {homeSectionVisible('score-top-15') && <div className="space-y-2">
               <button type="button" onClick={() => openSection('score-top-15')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <Top15AllTime onReleaseClick={openRelease} preview />
-            </div>
+            </div>}
 
-            <div className="space-y-2">
+            {homeSectionVisible('author-picks') && <div className="space-y-2">
               <button type="button" onClick={() => openSection('author-picks')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <AuthorsPicks onReviewClick={openReview} preview />
-            </div>
+            </div>}
 
-            <div className="space-y-2">
+            {homeSectionVisible('author-comments') && <div className="space-y-2">
               <button type="button" onClick={() => openSection('author-comments')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <AuthorComments refreshVersion={refreshKey + reviewVersion + commentVersion} releaseById={releaseById} onReleaseClick={openRelease} preview />
-            </div>
+            </div>}
 
             {/* Section 1: Top daily releases */}
-            <div className="space-y-2">
+            {homeSectionVisible('top-releases') && <div className="space-y-2">
               <button type="button" onClick={() => openSection('top-releases')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <TopCarousel releases={topCatalog} onReleaseClick={openRelease} userReviewsMap={userReviewsMap} />
-            </div>
+            </div>}
 
             {/* Section 2: Latest releases */}
-            <section className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            {homeSectionVisible('all-releases') && <section className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-7 w-7 items-center justify-center rounded-md bg-pink-400/10">
@@ -315,19 +317,19 @@ function AppContent() {
                 </div>
                 <button type="button" onClick={() => moveAddedReleases(530)} aria-label="შემდეგი რელიზები" className="absolute right-1 top-1/2 z-10 hidden -translate-y-1/2 rounded-full border border-white/10 bg-[#0a0a0c]/90 p-2 text-white shadow-xl transition hover:border-blue-300/60 hover:text-blue-300 md:block"><ChevronRight className="h-5 w-5" /></button>
               </div>
-            </section>
+            </section>}
 
-            <div className="space-y-2">
+            {homeSectionVisible('media-reviews') && <div className="space-y-2">
               <button type="button" onClick={() => openSection('media-reviews')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <MediaReviews refreshVersion={refreshKey + reviewVersion} releaseById={releaseById} onReviewClick={openReview} />
-            </div>
+            </div>}
 
-            <div className="space-y-2">
+            {homeSectionVisible('reviews') && <div className="space-y-2">
               <button type="button" onClick={() => openSection('reviews')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <RecentReviewsFeed releaseById={releaseById} releases={releaseCatalog} onReleaseClick={openRelease} onReviewClick={openReview} />
-            </div>
+            </div>}
 
-            <NewNamesSection releases={newNames} onReleaseClick={openRelease} onViewAll={() => openSection('new-names')} />
+            {homeSectionVisible('new-names') && <NewNamesSection releases={newNames} onReleaseClick={openRelease} onViewAll={() => openSection('new-names')} />}
           </main>
         </>
       )}

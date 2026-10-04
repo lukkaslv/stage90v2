@@ -14,7 +14,7 @@ export const sectionPaths: Record<SectionId, string> = {
 export const sectionTitles: Record<SectionId, string> = {
   'all-releases': 'ყველა რელიზი',
   'top-releases': 'ყველა დროის ტოპ რელიზები ქულებით',
-  'score-top-15': 'ყველა დროის ტოპ-15 ქულებით',
+  'score-top-15': 'ტოპ-15 ქულებით',
   'new-names': 'ახალი სახელები',
   reviews: 'ახალი რეცენზიები რელიზებზე',
   'media-reviews': 'მედიის რეცენზიები',

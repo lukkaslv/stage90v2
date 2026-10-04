@@ -1,4 +1,5 @@
 import type { PageId } from '@/types/music';
+import { sectionTitles, type SectionId } from '@/lib/sectionRoutes';
 import { supabase } from '@/lib/supabase';
 
 export interface MaintenanceRecord {
@@ -15,6 +16,18 @@ export const maintenanceTabs: { id: PageId; title: string }[] = [
   { id: 'top90', title: 'ტოპ-90' },
   { id: 'achievements', title: 'მიღწევები' },
   { id: 'concerts', title: 'კონცერტები' },
+];
+
+export const homeSections: { id: SectionId | 'home-hero'; title: string }[] = [
+  { id: 'home-hero', title: 'მთავარი ბანერი' },
+  { id: 'score-top-15', title: sectionTitles['score-top-15'] },
+  { id: 'author-picks', title: sectionTitles['author-picks'] },
+  { id: 'author-comments', title: sectionTitles['author-comments'] },
+  { id: 'top-releases', title: 'ტოპ რელიზები' },
+  { id: 'all-releases', title: 'დამატებული რელიზები' },
+  { id: 'media-reviews', title: sectionTitles['media-reviews'] },
+  { id: 'reviews', title: sectionTitles.reviews },
+  { id: 'new-names', title: sectionTitles['new-names'] },
 ];
 
 export function maintenanceMapFromRows(rows: unknown[]): MaintenanceMap {

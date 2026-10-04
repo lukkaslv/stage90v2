@@ -20,6 +20,12 @@ export interface ReactionTrack {
   youtube_url?: string | null;
 }
 
+export interface ReactionComment {
+  author: string | null;
+  text: string | null;
+  visible: boolean;
+}
+
 export interface ReactionView {
   id: string;
   scene: ReactionScene;
@@ -27,6 +33,7 @@ export interface ReactionView {
   params: number[];
   vibe: number;
   revealed: boolean;
+  comment?: ReactionComment;
   expires_at: string;
   release: ReactionRelease;
   tracks: ReactionTrack[];
@@ -39,6 +46,10 @@ export interface ReactionSession {
 }
 
 export const reactionStorageKey = 'stage90-reaction-session';
+
+export function reactionCommentInitial(author: string): string {
+  return Array.from(author.trim().replace(/^@/, ''))[0]?.toLocaleUpperCase() ?? '•';
+}
 
 export function reactionOutputUrl(token: string): string {
   return `${window.location.origin}/studio/obs?token=${encodeURIComponent(token)}`;

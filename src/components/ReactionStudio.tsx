@@ -3,9 +3,10 @@ import { Check, Copy, ExternalLink, Eye, EyeOff, Music2, Radio, RotateCcw, X } f
 import { supabase } from '@/lib/supabase';
 import { computeRZTScore, RZT_PARAMS, VIBE_LEVELS } from '@/types/music';
 import { useAllTimeTop15 } from '@/hooks/useAllTimeTop15';
-import { reactionOutputUrl, reactionStorageKey, type ReactionScene, type ReactionSession, type ReactionView } from '@/lib/reactionStudio';
+import { reactionCommentInitial, reactionOutputUrl, reactionStorageKey, type ReactionScene, type ReactionSession, type ReactionView } from '@/lib/reactionStudio';
 import { youtubeEmbedUrl } from '@/lib/youtubeEmbed';
 import ReactionCanvas from '@/components/ReactionCanvas';
+import RankMovementBadge from '@/components/RankMovementBadge';
 
 type Row = Record<string, unknown>;
 
@@ -17,7 +18,11 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   const [draftVibe, setDraftVibe] = useState(3);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
-  const { top, loading: topLoading, error: topError } = useAllTimeTop15();
+  const [commentAuthor, setCommentAuthor] = useState('');
+  const [commentText, setCommentText] = useState('');
+  const [commentBusy, setCommentBusy] = useState(false);
+  const [commentMessage, setCommentMessage] = useState('');
+  const { top, movement, loading: topLoading, error: topError } = useAllTimeTop15();
   const activeReleases = releases.filter((row) => row.is_active === true && row.parent_id == null);
   const selectedRelease = activeReleases.find((row) => String(row.id) === selectedReleaseId);
   const selectedTrack = view?.track_id ? releases.find((row) => String(row.id) === view.track_id) : null;
@@ -49,6 +54,8 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
       setSelectedReleaseId(restored.release.id);
       setDraftParams(restored.params);
       setDraftVibe(restored.vibe);
+      setCommentAuthor(restored.comment?.author ?? '');
+      setCommentText(restored.comment?.text ?? '');
     });
   }, []);
 
@@ -83,6 +90,8 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     setView(createdView);
     setDraftParams(createdView.params);
     setDraftVibe(createdView.vibe);
+    setCommentAuthor(createdView.comment?.author ?? '');
+    setCommentText(createdView.comment?.text ?? '');
     setBusy(false);
   };
 
@@ -118,6 +127,9 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
       setSelectedReleaseId(changedView.release.id);
       setDraftParams(changedView.params);
       setDraftVibe(changedView.vibe);
+      setCommentAuthor(changedView.comment?.author ?? '');
+      setCommentText(changedView.comment?.text ?? '');
+      setCommentMessage('');
     } else setMessage('რელიზის ჩატვირთვა ვერ მოხერხდა.');
     setBusy(false);
   };
@@ -137,6 +149,32 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     catch { setMessage('ბმულის დაკოპირება ვერ მოხერხდა.'); }
   };
 
+  const setCommentVisibility = async (visible: boolean) => {
+    if (!supabase || !session || commentBusy) return;
+    const author = commentAuthor.trim();
+    const text = commentText.trim();
+    if (visible && (!author || !text)) {
+      setCommentMessage('შეავსეთ ავტორის სახელი და კომენტარი.');
+      return;
+    }
+    setCommentBusy(true);
+    setCommentMessage('');
+    const result = await supabase.rpc('reaction_session_set_comment', {
+      p_id: session.id, p_author: author, p_text: text, p_visible: visible,
+    });
+    if (result.error || !result.data) {
+      setCommentMessage('კომენტარის განახლება ვერ მოხერხდა. გადაამოწმეთ მონაცემთა ბაზის განახლება.');
+    } else {
+      const refreshed = await supabase.rpc('reaction_session_view', { p_token: session.token });
+      if (refreshed.error || !refreshed.data) setCommentMessage('კომენტარის ჩატვირთვა ვერ მოხერხდა.');
+      else {
+        setView(refreshed.data as unknown as ReactionView);
+        setCommentMessage(visible ? 'კომენტარი ეთერში დამაგრდა.' : 'კომენტარი ეთერიდან დამალულია.');
+      }
+    }
+    setCommentBusy(false);
+  };
+
   const scenes: { id: ReactionScene; label: string }[] = [
     { id: 'intro', label: 'რელიზის ბარათი' },
     { id: 'tracks', label: 'ტრეკების სია' },
@@ -151,7 +189,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
 
     <div className="border border-[#343844] bg-[#12151d] p-4">
       <div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-bold text-white">ყველა დროის ტოპ-15 ქულებით</h3><p className="text-xs text-gray-500">ადგილი განისაზღვრება საერთო ქულით</p></div><span className="text-xs text-gray-500">{top.length}/15</span></div>
-      {topLoading && top.length === 0 ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : topError && top.length === 0 ? <p className="py-5 text-sm text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : top.length === 0 ? <p className="py-5 text-sm text-gray-400">შეფასებული აქტიური რელიზები ჯერ არ არის.</p> : <div className="flex gap-2 overflow-x-auto pb-2">{top.map((release, index) => <button key={String(release.id)} type="button" onClick={() => void changeRelease(String(release.id))} disabled={busy} aria-pressed={selectedReleaseId === String(release.id)} className={`flex w-48 shrink-0 items-center gap-2 border p-2 text-left transition-colors disabled:opacity-50 ${selectedReleaseId === String(release.id) ? 'border-blue-400 bg-blue-400/15' : 'border-[#343844] bg-[#191d27] hover:border-blue-400/50'}`}><span className="text-sm font-black text-blue-300">{String(index + 1).padStart(2, '0')}</span>{release.coverUrl ? <img src={release.coverUrl} alt="" className="h-10 w-10 shrink-0 object-cover" /> : <Music2 className="h-10 w-10 shrink-0 p-2 text-gray-500" />}<span className="min-w-0"><span className="block truncate text-xs font-bold text-white">{release.title}</span><span className="block truncate text-[11px] text-gray-400">{release.overall_score}/90 ქულა</span></span></button>)}</div>}
+      {topLoading && top.length === 0 ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : topError && top.length === 0 ? <p className="py-5 text-sm text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : top.length === 0 ? <p className="py-5 text-sm text-gray-400">შეფასებული აქტიური რელიზები ჯერ არ არის.</p> : <div className="flex gap-2 overflow-x-auto pb-2">{top.map((release, index) => <button key={String(release.id)} type="button" onClick={() => void changeRelease(String(release.id))} disabled={busy} aria-pressed={selectedReleaseId === String(release.id)} className={`flex w-48 shrink-0 items-center gap-2 border p-2 text-left transition-colors disabled:opacity-50 ${selectedReleaseId === String(release.id) ? 'border-blue-400 bg-blue-400/15' : 'border-[#343844] bg-[#191d27] hover:border-blue-400/50'}`}><span className="text-sm font-black text-blue-300">{String(index + 1).padStart(2, '0')}</span>{release.coverUrl ? <img src={release.coverUrl} alt="" className="h-10 w-10 shrink-0 object-cover" /> : <Music2 className="h-10 w-10 shrink-0 p-2 text-gray-500" />}<span className="min-w-0"><span className="block truncate text-xs font-bold text-white">{release.title}</span><span className="block truncate text-[11px] text-gray-400">{release.overall_score}/90 ქულა</span><RankMovementBadge rank={index + 1} movement={movement[String(release.id)]} compact /></span></button>)}</div>}
     </div>
 
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)]">
@@ -181,6 +219,16 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
             <div className="mt-4 flex flex-wrap gap-2"><button type="button" onClick={() => void copyLink()} className="inline-flex items-center gap-1.5 border border-blue-400 px-3 py-2 text-xs font-semibold text-blue-200"><Copy className="h-4 w-4" />OBS-ის ბმული</button><a href={reactionOutputUrl(session.token)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 border border-gray-600 px-3 py-2 text-xs font-semibold text-gray-200"><ExternalLink className="h-4 w-4" />ეკრანის გახსნა</a><button type="button" onClick={() => void revokeSession()} disabled={busy} className="inline-flex items-center gap-1.5 border border-rose-500/60 px-3 py-2 text-xs font-semibold text-rose-300 disabled:opacity-50"><X className="h-4 w-4" />ბმულის გაუქმება</button></div>
             <p className="mt-3 text-xs text-gray-500">ბმული ჩასვით OBS-ში ბრაუზერის წყაროდ. ზომა: 1920 × 1080. ბმული მოქმედებს 12 საათი.</p>
           </>}
+        </div>
+        <div className="border border-[#343844] bg-[#12151d] p-4">
+          <div className="flex items-center justify-between gap-3"><h3 className="font-bold text-white">მაყურებლის კომენტარი</h3><span className={`text-xs font-bold ${view?.comment?.visible ? 'text-emerald-300' : 'text-gray-400'}`}>{view?.comment?.visible ? 'დამაგრებულია' : 'დამალულია'}</span></div>
+          <p className="mt-1 text-xs text-gray-400">კომენტარი ვიდეოს ქვემოთ გამოჩნდება და დარჩება, სანამ დამალავთ ან რელიზს შეცვლით.</p>
+          <label className="mt-4 block text-xs font-semibold text-gray-300">ავტორის სახელი<input type="text" maxLength={60} value={commentAuthor} onChange={(event) => setCommentAuthor(event.target.value)} placeholder="მაყურებლის სახელი" className="mt-1.5 w-full border border-gray-600 bg-[#0b0d16] px-3 py-2.5 text-sm text-white" /></label>
+          <label className="mt-3 block text-xs font-semibold text-gray-300">კომენტარის ტექსტი<textarea maxLength={160} rows={3} value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="ჩასვით მაყურებლის კომენტარი" className="mt-1.5 w-full resize-y border border-gray-600 bg-[#0b0d16] px-3 py-2.5 text-sm text-white" /></label>
+          <p className="mt-1 text-right text-xs text-gray-400">{commentText.length}/160</p>
+          {commentAuthor.trim() && commentText.trim() && <div className="mt-3 border border-pink-400/30 bg-[#1c1826] p-3" aria-label="კომენტარის წინასწარი ნახვა"><p className="mb-2 text-xs font-bold text-pink-300">წინასწარი ნახვა</p><div className="flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-pink-400/50 bg-pink-400/20 text-sm font-black text-pink-200">{reactionCommentInitial(commentAuthor)}</span><div className="min-w-0"><strong className="block break-words text-sm text-white">{commentAuthor.trim()}</strong><p className="mt-1 whitespace-pre-wrap break-words text-sm text-gray-200">{commentText.trim()}</p></div></div></div>}
+          <div className="mt-4 grid grid-cols-2 gap-2"><button type="button" onClick={() => void setCommentVisibility(true)} disabled={!session || commentBusy || !commentAuthor.trim() || !commentText.trim()} className="min-h-11 bg-pink-500 px-3 py-2 text-sm font-bold text-white disabled:opacity-50">ეთერში დამაგრება</button><button type="button" onClick={() => void setCommentVisibility(false)} disabled={!session || commentBusy || !view?.comment?.visible} className="min-h-11 border border-gray-500 px-3 py-2 text-sm font-bold text-gray-200 disabled:opacity-50">დამალვა</button></div>
+          {commentMessage && <p role="status" className="mt-3 text-xs text-amber-300">{commentMessage}</p>}
         </div>
         {session && view && <div className="border border-[#343844] bg-[#12151d] p-4">
           <div className="mb-4 flex items-center justify-between gap-3"><div><h3 className="font-bold text-white">პირადი შეფასება</h3><p className="text-xs text-gray-500">ცვლილება ეკრანზე გამოჩნდება გაგზავნის შემდეგ</p></div><strong className="shrink-0 text-3xl font-black tabular-nums text-white">{score}<small className="text-sm text-gray-500">/90</small></strong></div>
