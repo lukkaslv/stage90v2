@@ -3,10 +3,14 @@ import { Check, Copy, ExternalLink, Eye, EyeOff, Music2, Radio, RotateCcw, X } f
 import { supabase } from '@/lib/supabase';
 import { computeRZTScore, RZT_PARAMS, VIBE_LEVELS } from '@/types/music';
 import { useAllTimeTop15 } from '@/hooks/useAllTimeTop15';
-import { reactionCommentInitial, reactionOutputUrl, reactionStorageKey, type ReactionScene, type ReactionSession, type ReactionView } from '@/lib/reactionStudio';
+import { useTopArtistRankings } from '@/hooks/useTopArtistRankings';
+import { artistPoints, artistTierFromRank } from '@/lib/artistRank';
+import { reactionCommentInitial, reactionOutputUrl, reactionStorageKey, type ReactionChartType, type ReactionScene, type ReactionSession, type ReactionView } from '@/lib/reactionStudio';
 import { youtubeEmbedUrl } from '@/lib/youtubeEmbed';
 import ReactionCanvas from '@/components/ReactionCanvas';
 import RankMovementBadge from '@/components/RankMovementBadge';
+import ArtistPortrait from '@/components/ArtistPortrait';
+import type { RankedArtist } from '@/types/artist';
 
 type Row = Record<string, unknown>;
 
@@ -23,6 +27,8 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   const [commentBusy, setCommentBusy] = useState(false);
   const [commentMessage, setCommentMessage] = useState('');
   const { top, movement, loading: topLoading, error: topError } = useAllTimeTop15();
+  const { data: artistTop, loading: artistsLoading, error: artistsError } = useTopArtistRankings();
+  const chartType = view?.chart_type ?? 'tracks';
   const activeReleases = releases.filter((row) => row.is_active === true && row.parent_id == null);
   const selectedRelease = activeReleases.find((row) => String(row.id) === selectedReleaseId);
   const selectedTrack = view?.track_id ? releases.find((row) => String(row.id) === view.track_id) : null;
@@ -110,6 +116,17 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     setBusy(false);
   };
 
+  const changeChart = async (nextChart: ReactionChartType) => {
+    if (!supabase || !session || !view || busy || nextChart === chartType) return;
+    setBusy(true); setMessage('');
+    const result = await supabase.rpc('reaction_session_set_chart', { p_id: session.id, p_chart_type: nextChart });
+    if (result.error || !result.data) { setMessage('ეთერის რეიტინგის შეცვლა ვერ მოხერხდა.'); setBusy(false); return; }
+    const refreshed = await supabase.rpc('reaction_session_view', { p_token: session.token });
+    if (refreshed.error || !refreshed.data) setMessage('რეიტინგის განახლება ვერ მოხერხდა.');
+    else setView(refreshed.data as unknown as ReactionView);
+    setBusy(false);
+  };
+
   const changeRelease = async (id: string) => {
     if (id === selectedReleaseId || busy) return;
     if (hasDraftChanges && !window.confirm('შეუნახავი შეფასება დაიკარგება. შეცვალოთ რელიზი?')) return;
@@ -188,8 +205,10 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     </div>
 
     <div className="border border-[#343844] bg-[#12151d] p-4">
-      <div className="mb-3 flex items-center justify-between gap-2"><div><h3 className="font-bold text-white">ყველა დროის ტოპ-15 ქულებით</h3><p className="text-xs text-gray-500">ადგილი განისაზღვრება საერთო ქულით</p></div><span className="text-xs text-gray-500">{top.length}/15</span></div>
-      {topLoading && top.length === 0 ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : topError && top.length === 0 ? <p className="py-5 text-sm text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : top.length === 0 ? <p className="py-5 text-sm text-gray-400">შეფასებული აქტიური რელიზები ჯერ არ არის.</p> : <div className="flex gap-2 overflow-x-auto pb-2">{top.map((release, index) => <button key={String(release.id)} type="button" onClick={() => void changeRelease(String(release.id))} disabled={busy} aria-pressed={selectedReleaseId === String(release.id)} className={`flex w-48 shrink-0 items-center gap-2 border p-2 text-left transition-colors disabled:opacity-50 ${selectedReleaseId === String(release.id) ? 'border-blue-400 bg-blue-400/15' : 'border-[#343844] bg-[#191d27] hover:border-blue-400/50'}`}><span className="text-sm font-black text-blue-300">{String(index + 1).padStart(2, '0')}</span>{release.coverUrl ? <img src={release.coverUrl} alt="" className="h-10 w-10 shrink-0 object-cover" /> : <Music2 className="h-10 w-10 shrink-0 p-2 text-gray-500" />}<span className="min-w-0"><span className="block truncate text-xs font-bold text-white">{release.title}</span><span className="block truncate text-[11px] text-gray-400">{release.overall_score}/90 ქულა</span><RankMovementBadge rank={index + 1} movement={movement[String(release.id)]} compact /></span></button>)}</div>}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold text-white">{chartType === 'artists' ? 'ყველა დროის ტოპ-15 არტისტი' : 'ყველა დროის ტოპ-15 ქულებით'}</h3><p className="text-xs text-gray-500">{chartType === 'artists' ? 'საშუალო ქულით · მინიმუმ 5 შეფასებული ტრეკი' : 'ადგილი განისაზღვრება საერთო ქულით'}</p></div><span className="text-xs text-gray-500">{chartType === 'artists' ? artistTop?.length ?? 0 : top.length}/15</span></div>
+      {session && view && <div className="mb-4 flex gap-2" role="group" aria-label="ეთერის რეიტინგი">{([{ id: 'tracks', label: 'ტრეკები' }, { id: 'artists', label: 'არტისტები' }] as const).map(({ id, label }) => <button key={id} type="button" onClick={() => void changeChart(id)} disabled={busy} aria-pressed={chartType === id} className={`min-h-10 border px-4 py-2 text-xs font-bold disabled:opacity-50 ${chartType === id ? 'border-pink-400 bg-pink-400/15 text-white' : 'border-gray-600 text-gray-300'}`}>{label}</button>)}</div>}
+      {chartType === 'artists' ? artistsLoading && !artistTop ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : artistsError && !artistTop ? <p className="py-5 text-sm text-amber-300">არტისტების რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : !artistTop?.length ? <p className="py-5 text-sm text-gray-400">რეიტინგში ჯერ არ არის არტისტი 5 შეფასებული ტრეკით.</p> : <div className="flex gap-2 overflow-x-auto pb-2">{artistTop.map((artist) => <StudioArtistCard key={artist.id} artist={artist} />)}</div>
+        : topLoading && top.length === 0 ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : topError && top.length === 0 ? <p className="py-5 text-sm text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : top.length === 0 ? <p className="py-5 text-sm text-gray-400">შეფასებული აქტიური რელიზები ჯერ არ არის.</p> : <div className="flex gap-2 overflow-x-auto pb-2">{top.map((release, index) => <button key={String(release.id)} type="button" onClick={() => void changeRelease(String(release.id))} disabled={busy} aria-pressed={selectedReleaseId === String(release.id)} className={`flex w-48 shrink-0 items-center gap-2 border p-2 text-left transition-colors disabled:opacity-50 ${selectedReleaseId === String(release.id) ? 'border-blue-400 bg-blue-400/15' : 'border-[#343844] bg-[#191d27] hover:border-blue-400/50'}`}><span className="text-sm font-black text-blue-300">{String(index + 1).padStart(2, '0')}</span>{release.coverUrl ? <img src={release.coverUrl} alt="" className="h-10 w-10 shrink-0 object-cover" /> : <Music2 className="h-10 w-10 shrink-0 p-2 text-gray-500" />}<span className="min-w-0"><span className="block truncate text-xs font-bold text-white">{release.title}</span><span className="block truncate text-[11px] text-gray-400">{release.overall_score}/90 ქულა</span><RankMovementBadge rank={index + 1} movement={movement[String(release.id)]} compact /></span></button>)}</div>}
     </div>
 
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)]">
@@ -242,4 +261,13 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     </div>
     {message && <p role="status" className="text-sm text-amber-300">{message}</p>}
   </section>;
+}
+
+function StudioArtistCard({ artist }: { artist: RankedArtist }) {
+  const tier = artistTierFromRank(artist.rank);
+  return <div className={`flex w-48 shrink-0 items-center gap-2 border border-[#343844] bg-[#191d27] p-2 stage-artist-${tier?.key ?? 'spark'}`}>
+    <span className="text-sm font-black text-blue-300">{String(artist.rank).padStart(2, '0')}</span>
+    <ArtistPortrait src={artist.photo_url} className="h-10 w-10 rounded-full" />
+    <span className="min-w-0"><strong className="block truncate text-xs text-white">{artist.name}</strong><span className="block truncate text-[11px] text-gray-400">{artistPoints(artist.average_score)}/90 · {artist.rated_track_count} ტრეკი</span><span className="block truncate text-[11px] font-bold" style={{ color: 'var(--artist-color)' }}>{tier?.label}</span></span>
+  </div>;
 }

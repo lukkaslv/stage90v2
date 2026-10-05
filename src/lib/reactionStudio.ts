@@ -1,4 +1,5 @@
 export type ReactionScene = 'intro' | 'tracks' | 'score';
+export type ReactionChartType = 'tracks' | 'artists';
 
 export interface ReactionRelease {
   id: string;
@@ -29,6 +30,7 @@ export interface ReactionComment {
 export interface ReactionView {
   id: string;
   scene: ReactionScene;
+  chart_type: ReactionChartType;
   track_id: string | null;
   params: number[];
   vibe: number;

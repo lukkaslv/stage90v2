@@ -1,4 +1,5 @@
 import type { RankMovement } from '@/hooks/useAllTimeTop15';
+import { leaderStatus } from '@/lib/leaderStatus';
 
 interface Props {
   rank: number;
@@ -8,6 +9,11 @@ interface Props {
 }
 
 export default function RankMovementBadge({ rank, movement, compact = false, micro = false }: Props) {
+  if (rank === 1) {
+    const status = leaderStatus(movement);
+    const label = micro ? 'ლიდერი' : compact ? status : `${status} · #1`;
+    return <span className={`stage-rank-status stage-rank-leader ${compact ? 'stage-rank-status-compact' : ''}`} title={status} aria-label={`${status}, პირველი ადგილი`}>{label}</span>;
+  }
   if (!movement || (!movement.hasPrevious && movement.liveChangedAt === null)) return null;
   const live = movement.liveChangedAt !== null;
   const previousRank = live ? movement.livePreviousRank : movement.previousRank;
@@ -16,11 +22,10 @@ export default function RankMovementBadge({ rank, movement, compact = false, mic
 
   const total = movement.firstRank == null ? null : movement.firstRank - rank;
   const totalHint = total == null || total === 0 ? '' : ` · პირველი ჩანაწერიდან ${total > 0 ? '↑' : '↓'} ${Math.abs(total)}`;
-  const newLeader = rank === 1 && (change == null || change > 0);
-  const label = newLeader ? micro ? 'ლიდერი' : compact ? 'ახალი ლიდერი' : 'ახალი ლიდერი · #1' : change == null ? compact ? 'ახალი' : `ახალი #${rank}` : `${change > 0 ? '↑' : '↓'} ${Math.abs(change)}`;
-  const direction = newLeader ? 'leader' : change == null ? 'new' : change > 0 ? 'up' : 'down';
+  const label = change == null ? compact ? 'ახალი' : `ახალი #${rank}` : `${change > 0 ? '↑' : '↓'} ${Math.abs(change)}`;
+  const direction = change == null ? 'new' : change > 0 ? 'up' : 'down';
 
-  return <span key={`${rank}:${change}`} className={`stage-rank-status stage-rank-${direction} ${compact ? 'stage-rank-status-compact' : ''}`} title={`${live ? 'ბოლო ცვლილება' : 'ბოლო შენახული პოზიციიდან'} ${label}${totalHint}`} aria-label={newLeader ? 'ახალი ლიდერი, პირველი ადგილი' : change == null ? `ახალი, ${rank} ადგილი` : `${Math.abs(change)} ადგილით ${change > 0 ? 'დაწინაურდა' : 'ჩამოქვეითდა'}`}>
+  return <span key={`${rank}:${change}`} className={`stage-rank-status stage-rank-${direction} ${compact ? 'stage-rank-status-compact' : ''}`} title={`${live ? 'ბოლო ცვლილება' : 'ბოლო შენახული პოზიციიდან'} ${label}${totalHint}`} aria-label={change == null ? `ახალი, ${rank} ადგილი` : `${Math.abs(change)} ადგილით ${change > 0 ? 'დაწინაურდა' : 'ჩამოქვეითდა'}`}>
     {label}
   </span>;
 }
