@@ -33,15 +33,15 @@ export default function TopArtists({ preview = false, onArtistClick }: Props) {
       <span>{data ? 'რეიტინგის განახლება ვერ მოხერხდა. ნაჩვენებია ბოლო მიღებული მონაცემები.' : 'არტისტების რეიტინგი ვერ ჩაიტვირთა.'}</span>
       <button type="button" onClick={reload} className="underline underline-offset-4">ხელახლა ცდა</button>
     </div>}
-    {loading && !data ? <SectionLoader /> : !error && entries.length === 0 ? <p className="stage-empty-state">რეიტინგი გამოჩნდება, როცა არტისტების ტრეკები შეფასდება.</p> : <ol className={preview ? 'stage-artist-preview' : 'stage-artist-leaderboard'}>
+    {loading && !data ? <SectionLoader /> : !error && entries.length === 0 ? <p className="stage-empty-state">რეიტინგი გამოჩნდება, როცა არტისტს მინიმუმ 5 შეფასებული ტრეკი ექნება.</p> : <ol className={preview ? 'stage-artist-preview' : 'stage-artist-leaderboard'}>
       {entries.map((artist) => {
         const tier = artistTierFromRank(artist.rank);
         return <li key={artist.id} className={`stage-artist-${tier?.key ?? 'spark'}`}>
-          <button type="button" onClick={() => onArtistClick(artist.id)} className="stage-artist-card" aria-label={`${artist.rank}. ${artist.name} — ${artistPoints(artist.total_score)} ქულა, პროფილის ნახვა`}>
+          <button type="button" onClick={() => onArtistClick(artist.id)} className="stage-artist-card" aria-label={`${artist.rank}. ${artist.name} — საშუალო ${artistPoints(artist.average_score)} ქულა, პროფილის ნახვა`}>
             <span className="stage-artist-position">{String(artist.rank).padStart(2, '0')}</span>
             <ArtistPortrait src={artist.photo_url} />
-            <span className="stage-artist-card-copy"><strong className="stage-artist-name">{artist.name}</strong><ArtistRankBadge rank={artist.rank} /><span className="stage-artist-meta">{artist.rated_track_count} შეფასებული ტრეკი · საშუალო {artistPoints(artist.average_score)}/90</span></span>
-            <span className="stage-artist-total"><strong>{artistPoints(artist.total_score)}</strong><span>ჯამური ქულა</span></span>
+            <span className="stage-artist-card-copy"><strong className="stage-artist-name">{artist.name}</strong><ArtistRankBadge rank={artist.rank} /><span className="stage-artist-meta">{artist.rated_track_count} შეფასებული ტრეკი</span></span>
+            <span className="stage-artist-total"><strong>{artistPoints(artist.average_score)}/90</strong><span>საშუალო ქულა</span></span>
             <ArrowUpRight aria-hidden="true" className="stage-artist-open" />
           </button>
         </li>;
@@ -51,12 +51,12 @@ export default function TopArtists({ preview = false, onArtistClick }: Props) {
 
   if (preview) return chart;
   return <main className="mx-auto max-w-7xl space-y-8 px-4 py-10 sm:px-6 lg:px-8">
-    <PageHeading title="არტისტები" description="ტრეკების ჯამური ქულები, ცოცხალი რეიტინგი და არტისტების პროფილები." aside={<Users aria-hidden="true" className="h-9 w-9 text-blue-300" />} />
+    <PageHeading title="არტისტები" description="შეფასებული ტრეკების საშუალო ქულა, ცოცხალი რეიტინგი და არტისტების პროფილები." aside={<Users aria-hidden="true" className="h-9 w-9 text-blue-300" />} />
     {chart}
     <details className="stage-artist-rules">
       <summary>როგორ ითვლება რეიტინგი და სტატუსი?</summary>
-      <p className="mt-4 text-sm leading-7 text-gray-300">ადგილს განსაზღვრავს არტისტთან დაკავშირებული აქტიური ტრეკების საერთო ქულების ჯამი. თითოეული ტრეკი ერთხელ ითვლება; ალბომისა და კრებულის ქულა ცალკე არ ემატება. საერთო ტრეკის ქულა თითოეულ დაკავშირებულ არტისტს სრულად ეთვლება. შეუფასებელი ტრეკები საშუალო ქულაში არ შედის.</p>
-      <p className="mt-2 text-sm leading-7 text-gray-400">თანაბარი ჯამისას უპირატესობა ენიჭება უფრო მაღალ საშუალო ქულას, შემდეგ — უფრო ადრე შექმნილ პროფილს. სტატუსი მიმდინარე ადგილს მიჰყვება და შესაძლოა შეიცვალოს. შეფასებული ტრეკის გარეშე არტისტს ადგილი და სტატუსი არ ენიჭება.</p>
+      <p className="mt-4 text-sm leading-7 text-gray-300">რეიტინგში მოსახვედრად არტისტს მინიმუმ 5 შეფასებული ტრეკი სჭირდება. ადგილს განსაზღვრავს ამ ტრეკების საშუალო ქულა. თითოეული აქტიური ტრეკი ერთხელ ითვლება; ალბომისა და კრებულის ქულა ცალკე არ ემატება. საერთო ტრეკის ქულა თითოეულ დაკავშირებულ არტისტს სრულად ეთვლება. შეუფასებელი ტრეკები საშუალო ქულაში არ შედის.</p>
+      <p className="mt-2 text-sm leading-7 text-gray-400">თანაბარი საშუალოსას უპირატესობა ენიჭება უფრო მეტ შეფასებულ ტრეკს, შემდეგ — უფრო ადრე შექმნილ პროფილს. სტატუსი მიმდინარე ადგილს მიჰყვება და შესაძლოა შეიცვალოს. 5 შეფასებულ ტრეკამდე არტისტს ადგილი და სტატუსი არ ენიჭება.</p>
       <ul className="mt-4 flex flex-wrap gap-3">{ARTIST_RANK_TIERS.map((tier) => <li key={tier.key} className="flex flex-col gap-2"><ArtistRankBadge rank={tier.maxRank === Infinity ? 12 : tier.maxRank} /><span className="text-xs text-gray-400">{tier.places}</span></li>)}</ul>
     </details>
     <ArtistDirectory onArtistClick={onArtistClick} />

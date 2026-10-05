@@ -53,12 +53,12 @@ export default function ArtistProfile({ id, onBack, onReleaseClick }: Props) {
         </div>
       </header>
       <dl className="stage-artist-stats my-7">
-        <div><dt>მიმდინარე ადგილი</dt><dd>{artist.rank ? `#${artist.rank}` : '—'}</dd></div>
+        <div><dt>მიმდინარე ადგილი</dt><dd>{artist.rank ? `#${artist.rank}` : <span className="text-base">რეიტინგამდე კიდევ {5 - artist.rated_track_count} ტრეკი</span>}</dd></div>
         <div><dt>ჯამური ქულა</dt><dd>{artistPoints(artist.total_score)}</dd></div>
         <div><dt>საშუალო შეფასება</dt><dd>{artist.rated_track_count ? `${artistPoints(artist.average_score)}/90` : '—'}</dd></div>
         <div><dt>შეფასებული ტრეკები</dt><dd>{artist.rated_track_count}<small> / {artist.track_count}</small></dd></div>
       </dl>
-      <p className="mb-7 max-w-3xl text-sm leading-6 text-gray-400">ჯამში შედის თითოეული აქტიური ტრეკის საერთო ქულა ერთხელ. ალბომისა და კრებულის ქულა ცალკე არ ემატება. სტატუსი მიმდინარე ადგილთან ერთად იცვლება.</p>
+      <p className="mb-7 max-w-3xl text-sm leading-6 text-gray-400">ადგილს განსაზღვრავს მინიმუმ 5 შეფასებული აქტიური ტრეკის საშუალო ქულა. თითოეული ტრეკი ერთხელ ითვლება; ალბომისა და კრებულის ქულა ცალკე არ ემატება. სტატუსი მიმდინარე ადგილთან ერთად იცვლება.</p>
       <section aria-labelledby="artist-catalog-title">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4"><h2 id="artist-catalog-title" className="text-xl font-bold text-white">რელიზები</h2><div className="stage-chart-tabs flex flex-wrap gap-2" role="group" aria-label="რელიზების ტიპი">
           {([{ key: 'all', label: 'ყველა' }, { key: 'tracks', label: 'ტრეკები' }, { key: 'albums', label: 'ალბომები და კრებულები' }] as const).map((item) => <button key={item.key} type="button" aria-pressed={filter === item.key} onClick={() => setFilter(item.key)} className={filter === item.key ? 'stage-chart-tab-active' : ''}>{item.label}</button>)}

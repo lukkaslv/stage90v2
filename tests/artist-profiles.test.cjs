@@ -5,6 +5,7 @@ const test = require('node:test');
 const { PGlite } = require('@electric-sql/pglite');
 
 const migration = readFileSync(path.join(__dirname, '../supabase/migrations/20261005000005_artist_profiles.sql'), 'utf8');
+const averageRankingMigration = readFileSync(path.join(__dirname, '../supabase/migrations/20261005000006_artist_average_ranking.sql'), 'utf8');
 const adminId = '00000000-0000-4000-8000-000000000001';
 const readerId = '00000000-0000-4000-8000-000000000002';
 
@@ -43,6 +44,7 @@ async function database(idType, legacy = false) {
     insert into public.artists(name, slug, image_url) values ('არსებული არტისტი', 'existing-artist', 'https://example.com/portrait.png');
   `);
   await db.exec(migration);
+  await db.exec(averageRankingMigration);
   return db;
 }
 
@@ -58,7 +60,7 @@ async function save(db, { id = null, name = 'არტისტი', links = [],
 }
 
 for (const idType of ['uuid', 'bigint']) {
-  test(`artist totals deduplicate album tracks and reorder immediately (${idType} release IDs)`, async () => {
+  test(`artist totals deduplicate album tracks and update immediately (${idType} release IDs)`, async () => {
     const db = await database(idType);
     try {
       const ids = Array.from({ length: 5 }, (_, index) => idType === 'uuid' ? `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}` : String(index + 1));
@@ -70,12 +72,13 @@ for (const idType of ['uuid', 'bigint']) {
       const second = await save(db, { name: 'მეორე', links: [ids[1]] });
       const unranked = await save(db, { name: 'შეუფასებელი', links: [ids[3]] });
       let ranks = (await db.query('select * from public.artist_rankings order by rank nulls last')).rows;
-      assert.equal(ranks[0].id, first);
-      assert.equal(Number(ranks[0].total_score), 165);
-      assert.equal(Number(ranks[0].average_score), 82.5);
-      assert.equal(ranks[0].rated_track_count, 2);
-      assert.equal(ranks[0].track_count, 3);
-      assert.equal(ranks[0].release_count, 4);
+      const firstRow = ranks.find((row) => row.id === first);
+      assert.equal(Number(firstRow.total_score), 165);
+      assert.equal(Number(firstRow.average_score), 82.5);
+      assert.equal(firstRow.rated_track_count, 2);
+      assert.equal(firstRow.track_count, 3);
+      assert.equal(firstRow.release_count, 4);
+      assert.equal(firstRow.rank, null);
       assert.equal(ranks.find((row) => row.id === second).total_score, 85);
       assert.equal(ranks.find((row) => row.id === unranked).rank, null);
 
@@ -83,8 +86,8 @@ for (const idType of ['uuid', 'bigint']) {
       await db.exec('reset role');
       await db.query('update public.releases set overall_score = 90 where id::text = $1', [ids[3]]);
       ranks = (await db.query('select * from public.artist_rankings order by rank')).rows;
-      assert.equal(ranks[1].id, unranked);
-      assert.equal(ranks[2].id, second);
+      assert.equal(ranks.find((row) => row.id === unranked).rank, null);
+      assert.equal(ranks.find((row) => row.id === second).rank, null);
       await db.query('update public.releases set is_active = false where id::text = $1', [ids[0]]);
       // Explicit track links survive hiding the linked album, with no duplication.
       assert.equal((await db.query('select total_score from public.artist_rankings where id = $1', [first])).rows[0].total_score, 255);
@@ -94,6 +97,35 @@ for (const idType of ['uuid', 'bigint']) {
     } finally { await db.close(); }
   });
 }
+
+test('artist ranking uses exact average after five scored tracks and breaks ties by track count', async () => {
+  const db = await database('bigint');
+  try {
+    const scores = [80, 80, 80, 80, 80, 80, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 90, 80, 80, 80, 80, 81];
+    for (const [index, score] of scores.entries()) {
+      await db.query('insert into public.releases(id, overall_score) values ($1, $2)', [index + 1, score]);
+    }
+    await asRole(db, 'authenticated', adminId);
+    const prolific = await save(db, { name: 'ბევრი ტრეკი', links: ['1', '2', '3', '4', '5', '6'] });
+    const highAverage = await save(db, { name: 'მაღალი საშუალო', links: ['7', '8', '9', '10', '11'] });
+    const tiedWithMoreTracks = await save(db, { name: 'მეტი შეფასებული ტრეკი', links: ['12', '13', '14', '15', '16', '17'] });
+    const belowThreshold = await save(db, { name: 'ოთხი ტრეკი', links: ['18', '19', '20', '21'] });
+    const fractionalAverage = await save(db, { name: 'ზუსტი საშუალო', links: ['21', '22', '23', '24', '25'] });
+    const rows = (await db.query('select id, rank, average_score, rated_track_count from public.artist_rankings')).rows;
+    assert.equal(rows.find((row) => row.id === belowThreshold).rank, null);
+    assert.equal(rows.find((row) => row.id === tiedWithMoreTracks).rank, 1);
+    assert.equal(rows.find((row) => row.id === highAverage).rank, 2);
+    assert.equal(rows.find((row) => row.id === fractionalAverage).rank, 3);
+    assert.equal(rows.find((row) => row.id === prolific).rank, 4);
+    assert.equal(Number(rows.find((row) => row.id === fractionalAverage).average_score), 80.2);
+
+    await db.exec('reset role');
+    await db.exec('update public.releases set overall_score = 0 where id = 11');
+    const changed = (await db.query('select rank, rated_track_count from public.artist_rankings where id = $1', [highAverage])).rows[0];
+    assert.equal(changed.rated_track_count, 4);
+    assert.equal(changed.rank, null);
+  } finally { await db.close(); }
+});
 
 test('legacy artist directory is preserved and saving is atomic with concurrent-edit protection', async () => {
   const db = await database('uuid', true);
@@ -152,9 +184,9 @@ test('album inheritance follows catalog changes, unlinking and deterministic sco
     await asRole(db, 'authenticated', adminId);
     const before = (await db.query('select updated_at from public.artists where id=$1', [first])).rows[0];
     await save(db, { id: first, version: before.updated_at, links: ['2'] });
-    const tied = (await db.query('select id, total_score from public.artist_rankings order by rank')).rows;
-    assert.deepEqual(tied.map((row) => row.id), [first, second]);
+    const tied = (await db.query('select id, total_score, rank from public.artist_rankings order by id')).rows;
     assert.deepEqual(tied.map((row) => row.total_score), [70, 70]);
+    assert.ok(tied.every((row) => row.rank === null));
     const version = (await db.query('select updated_at from public.artists where id=$1', [first])).rows[0].updated_at;
     await assert.rejects(save(db, { id: first, version, links: ['missing'] }));
     assert.equal((await db.query('select release_id from public.artist_releases where artist_id=$1', [first])).rows[0].release_id, 2);

@@ -1,5 +1,5 @@
 export const ARTIST_RANK_TIERS = [
-  { key: 'legend', label: 'სცენის ლეგენდა', places: 'პირველი ადგილი', maxRank: 1 },
+  { key: 'legend', label: '#STAGE90 ლეგენდა', places: 'პირველი ადგილი', maxRank: 1 },
   { key: 'superstar', label: 'სუპერვარსკვლავი', places: 'მე-2–მე-3 ადგილი', maxRank: 3 },
   { key: 'star', label: 'ვარსკვლავი', places: 'მე-4–მე-7 ადგილი', maxRank: 7 },
   { key: 'rising', label: 'ამომავალი ვარსკვლავი', places: 'მე-8–მე-11 ადგილი', maxRank: 11 },

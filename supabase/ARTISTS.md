@@ -1,8 +1,9 @@
 # Artist profiles and live rankings
 
-Migration: `migrations/20261005000005_artist_profiles.sql`.
+Migrations: `migrations/20261005000005_artist_profiles.sql`, then
+`migrations/20261005000006_artist_average_ranking.sql`.
 
-Apply this migration before publishing the frontend. It extends the existing `artists`
+Apply both migrations in order before publishing the frontend. The first extends the existing `artists`
 directory, retaining IDs, slugs, image URLs and other legacy fields/relations. Existing
 HTTPS image URLs are copied to `photo_url`; new slugs default to a generated unique ID.
 Do not replay unrelated historical migrations to install this feature.
@@ -23,15 +24,16 @@ may belong to multiple artists. Removing an artist removes associations, not rel
 ## Ranking rules
 
 - Only active profiles and active releases participate.
-- Sum each distinct scored track's current `overall_score` once per artist.
+- Average each distinct scored track's current `overall_score` once per artist.
 - Album/EP/mixtape containers and releases with children add no separate points.
 - Unrated tracks do not affect the average or receive release tier badges.
 - Collaborations contribute their full track score once to each linked artist.
-- Profiles with no scored tracks are listed in the directory with no rank/status.
-- Sort by total descending, average descending, profile creation time ascending,
-  then ID ascending for deterministic ties. Show the first 15 in the chart.
+- Profiles with fewer than five scored tracks are listed in the directory with no rank/status.
+- Sort by the exact average descending, scored track count descending, profile creation
+  time ascending, then ID ascending for deterministic ties. Show the first 15 in the chart.
 - Status follows rank: 1 legend, 2–3 superstar, 4–7 star, 8–11 rising, 12+ spark.
-- Scores are never capped at 90 for artists; the average remains on a 90-point scale.
+- The total remains available as a profile statistic; the average is shown on a
+  90-point scale and rounded to one decimal only for display.
 
 `artist_release_catalog` and `artist_rankings` are security-invoker views calculated
 from current data. Realtime publication includes `artists`, `artist_releases` and
@@ -47,9 +49,10 @@ release tiers and account role badges.
 
 `npm test` executes the actual migration in disposable PostgreSQL (PGlite), covering
 UUID/bigint release IDs, legacy artists compatibility, deduplication, score changes,
-unrated/hidden records, cascading links, atomic validation, concurrent edits, public
+the five-track threshold and average ordering, unrated/hidden records, cascading links,
+atomic validation, concurrent edits, public
 visibility and admin-only mutation/storage policies. No test records enter Supabase.
 
 After applying, verify with real editorial profiles: upload a photo, link an album
 and one of its tracks, open the profile, then change a track score in another session.
-The sum should include that track once and update the rank/status without reloading.
+The average should include that track once and update the rank/status without reloading.
