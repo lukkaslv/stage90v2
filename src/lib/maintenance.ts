@@ -13,6 +13,7 @@ export type MaintenanceMap = Record<string, MaintenanceRecord>;
 
 export const maintenanceTabs: { id: PageId; title: string }[] = [
   { id: 'releases', title: 'რელიზები' },
+  { id: 'artists', title: 'არტისტები' },
   { id: 'top90', title: 'ტოპ-90' },
   { id: 'achievements', title: 'მიღწევები' },
   { id: 'concerts', title: 'კონცერტები' },

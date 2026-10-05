@@ -33,6 +33,7 @@ import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import RoleBadge, { VerificationBadge } from '@/components/RoleBadge';
 import ScoreTriplet from '@/components/ScoreTriplet';
+import ReleaseArtists from '@/components/ReleaseArtists';
 import { releaseCommunityScore, releaseValueTier, STRICT_VALUE_TIER_CONFIG, valueTierFromScore } from '@/lib/valueTier';
 
 interface ReleaseDetailProps {
@@ -40,6 +41,7 @@ interface ReleaseDetailProps {
   onBack: () => void;
   onOpenRelease: (release: Release) => void;
   onOpenReview: (id: string) => void;
+  onOpenArtist: (id: string) => void;
   backToRelease?: boolean;
   onOpenAuth: () => void;
   onReviewSubmitted?: (releaseId: string | number, created: boolean) => void;
@@ -120,7 +122,7 @@ function fallbackRelease(candidate: Release | string | null): Release | null {
   return candidate && typeof candidate !== 'string' ? candidate : null;
 }
 
-export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenReview, backToRelease = false, onOpenAuth, onReviewSubmitted }: ReleaseDetailProps) {
+export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenReview, onOpenArtist, backToRelease = false, onOpenAuth, onReviewSubmitted }: ReleaseDetailProps) {
   const { isAuthenticated, user } = useAuth();
   const [params, setParams] = useState<number[]>([5, 5, 5, 5]);
   const [vibeLevel, setVibeLevel] = useState(3);
@@ -247,7 +249,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
   const charOver = charCount > charMax;
 
   const canSubmit =
-    isAuthenticated &&
+    isAuthenticated && (user?.isVerified === true || user?.role === 'admin') &&
     (formTab !== 'review' ||
       (reviewTitle.trim().length > 0 && charCount >= charMin && charCount <= charMax));
   const isMediaUser = user?.role === 'media' || user?.role === 'admin';
@@ -568,6 +570,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
               {activeRelease.title}
             </h1>
             <p className="mt-1.5 text-lg text-gray-400">{activeRelease.artist}</p>
+            <ReleaseArtists releaseId={String(activeRelease.id)} onArtistClick={onOpenArtist} />
 
             {/* Streaming button */}
             <div className="mt-4 flex items-center gap-3">
@@ -652,7 +655,9 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 შესული ხართ როგორც {user.displayName}
               </p>
               <p className="text-xs text-gray-400">
-                {user.role === 'author' ? 'ვერიფიცირებული ავტორი — შეფასება და რეცენზია ხელმისაწვდომია' : 'მომხმარებელი — შეფასება და რეცენზია ხელმისაწვდომია'}
+                {user.isVerified || user.role === 'admin'
+                  ? 'შეფასება და რეცენზია ხელმისაწვდომია'
+                  : 'ანგარიში შექმნილია. შეფასება და რეცენზია ადმინისტრატორის ვერიფიკაციის შემდეგ გახდება ხელმისაწვდომი.'}
               </p>
             </div>
           </div>

@@ -96,8 +96,8 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      setError('შეავსეთ ყველა აუცილებელი ველი');
+    if (!email.trim() || password.length < 8 || password !== confirmPassword) {
+      setError('შეავსეთ ელ-ფოსტა და მიუთითეთ მინიმუმ 8-სიმბოლოიანი, დადასტურებასთან შესაბამისი პაროლი');
       return;
     }
     if (!validSocialUrl(socialUrl.trim())) {
@@ -119,7 +119,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
     setError('');
     setNotice('');
     setIsSubmitting(true);
-    const result = await signUp(email.trim(), {
+    const result = await signUp(email.trim(), password, {
       role: registerRole,
       displayName: displayName.trim(),
       registrationReason: regReason.trim(),
@@ -131,7 +131,9 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
       setError(result.error);
       return;
     }
-    setNotice('განაცხადი გაიგზავნა. ადმინისტრატორის დადასტურების შემდეგ ელ-ფოსტით მიიღებთ მოწვევას ანგარიშის შესაქმნელად.');
+    setNotice(result.needsEmailConfirmation
+      ? 'ანგარიში შეიქმნა. დაადასტურეთ ელ-ფოსტა, შემდეგ შედით ანგარიშში. შეფასება და რეცენზია ადმინისტრატორის ვერიფიკაციის შემდეგ გახდება ხელმისაწვდომი.'
+      : 'ანგარიში შეიქმნა. შეფასება და რეცენზია ადმინისტრატორის ვერიფიკაციის შემდეგ გახდება ხელმისაწვდომი.');
   };
 
   const handleInvite = async (event: React.FormEvent) => {
@@ -184,7 +186,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
               <img src="/stage90-mark.svg" alt="" className="h-full w-full" />
             </div>
             <h2 id="stage-auth-heading" className="text-xl font-bold text-white">
-              {mode === 'login' ? 'ავტორიზაცია' : mode === 'invite' ? 'პაროლის შექმნა' : 'რეგისტრაციის განაცხადი'}
+              {mode === 'login' ? 'ავტორიზაცია' : mode === 'invite' ? 'პაროლის შექმნა' : 'რეგისტრაცია'}
             </h2>
             <p className="mt-1 text-xs text-gray-500">
               ქართული მუსიკის სცენა
@@ -313,9 +315,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                     className={`${inputClass} pl-10`}
                   />
                 </div>
-                {registerRole === 'user' && (
-                  <p className="mt-1 text-[11px] text-gray-600">ასევე იქნება ლოგინი ავტორიზაციისთვის</p>
-                )}
+                <p className="mt-1 text-[11px] text-gray-600">ამ ელ-ფოსტით შეხვალთ ანგარიშში</p>
               </div>
 
               {/* USER ROLE FIELDS */}
@@ -375,7 +375,16 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                   <Link2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-600" />
                   <input type="url" value={socialUrl} onChange={(event) => setSocialUrl(event.target.value)} placeholder="https://www.instagram.com/თქვენი_პროფილი/" className={`${inputClass} pl-10`} />
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-gray-400">განაცხადს ადმინისტრატორი შეამოწმებს. მიუთითეთ რეალური პროფილი, რომელიც თქვენ გეკუთვნით.</p>
+                <p className="mt-2 text-xs leading-relaxed text-gray-400">ანგარიში მაშინვე შეიქმნება. ადმინისტრატორი გადაამოწმებს მითითებულ პროფილს და ჩართავს შეფასებისა და რეცენზიის უფლებას.</p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block text-sm text-gray-300">პაროლი *
+                  <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={8} autoComplete="new-password" className={`${inputClass} mt-1`} />
+                </label>
+                <label className="block text-sm text-gray-300">გაიმეორეთ პაროლი *
+                  <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength={8} autoComplete="new-password" className={`${inputClass} mt-1`} />
+                </label>
               </div>
 
               {/* Legal checkboxes */}
@@ -414,7 +423,7 @@ export default function AuthModal({ initialMode, onClose }: AuthModalProps) {
                 disabled={isSubmitting}
                 className="w-full rounded-lg bg-gradient-to-r from-blue-400 to-pink-500 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90 glow-cyan"
               >
-                {isSubmitting ? 'იგზავნება...' : 'განაცხადის გაგზავნა'}
+                {isSubmitting ? 'იქმნება...' : 'ანგარიშის შექმნა'}
               </button>
             </form>
           )}

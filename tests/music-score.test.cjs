@@ -23,6 +23,7 @@ function loadTypeScript(relativePath, imports = {}) {
 }
 
 const tiers = loadTypeScript('src/lib/valueTier.ts');
+const artistRanks = loadTypeScript('src/lib/artistRank.ts');
 const { computeRZTScore, scoreToTier, VIBE_COEFFICIENTS, RZT_PARAMS } = loadTypeScript('src/types/music.ts', {
   '@/lib/valueTier': tiers,
 });
@@ -60,4 +61,13 @@ test('release tier reads the overall score, not either role-group average', () =
   assert.equal(tiers.releaseValueTier({ overall_score: 49, community_score: 90, critics_score: 90 }), 'ვერცხლი');
   assert.equal(tiers.releaseValueTier({ overall_score: 0, community_score: 90 }), null);
   assert.equal(tiers.releaseValueTier({ community_score: 90 }), null);
+});
+
+test('artist status follows every agreed rank boundary, with no status for unranked artists', () => {
+  for (const [rank, key] of [[1, 'legend'], [2, 'superstar'], [3, 'superstar'], [4, 'star'], [7, 'star'], [8, 'rising'], [11, 'rising'], [12, 'spark'], [15, 'spark'], [100, 'spark']]) {
+    assert.equal(artistRanks.artistTierFromRank(rank).key, key);
+  }
+  for (const rank of [null, undefined, 0, -1, 1.5, Infinity]) {
+    assert.equal(artistRanks.artistTierFromRank(rank), null);
+  }
 });

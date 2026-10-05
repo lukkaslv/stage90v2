@@ -97,16 +97,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return {};
   };
 
-  const signUp = async (email: string, profile: ProfileInput) => {
+  const signUp = async (email: string, password: string, profile: ProfileInput) => {
     if (!supabase) return { error: 'Supabase ჯერ არ არის კონფიგურირებული' };
-    const { error } = await supabase.from('registration_requests').insert({
+    const { data, error } = await supabase.auth.signUp({
       email: email.trim().toLowerCase(),
-      requested_role: profile.role,
-      display_name: profile.role === 'author' ? profile.artistName?.trim() : profile.displayName?.trim(),
-      registration_reason: profile.registrationReason?.trim() || null,
-      social_url: profile.socialUrl.trim(),
+      password,
+      options: { data: {
+        role: profile.role,
+        display_name: profile.role === 'author' ? profile.artistName?.trim() : profile.displayName?.trim(),
+        artist_name: profile.role === 'author' ? profile.artistName?.trim() : null,
+        registration_reason: profile.registrationReason?.trim() || null,
+        verification_link: profile.socialUrl.trim(),
+      } },
     });
-    return error ? { error: 'განაცხადი ვერ გაიგზავნა. შეამოწმეთ ველები ან სცადეთ სხვა ელ-ფოსტა.' } : {};
+    return error
+      ? { error: 'ანგარიშის შექმნა ვერ მოხერხდა. შეამოწმეთ მონაცემები ან სცადეთ სხვა ელ-ფოსტა.' }
+      : { needsEmailConfirmation: data.session === null };
   };
 
   const setPassword = async (password: string) => {

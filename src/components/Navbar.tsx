@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
-import { Award, CircleHelp, Disc3, LogIn, LogOut, Menu, MessageSquare, PanelLeftClose, PanelLeftOpen, Search, Shield, Sparkles, Ticket, UserRound, UserPlus, X } from 'lucide-react';
+import { Award, CircleHelp, Disc3, LogIn, LogOut, Menu, MessageSquare, Mic2, PanelLeftClose, PanelLeftOpen, Search, Shield, Sparkles, Ticket, UserRound, UserPlus, X } from 'lucide-react';
 import { categoryTabs, type PageId } from '@/types/music';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
@@ -9,7 +9,7 @@ import { sectionTitles, type SectionId } from '@/lib/sectionRoutes';
 
 const MediaReleaseModal = lazy(() => import('@/components/MediaReleaseModal'));
 
-const tabIcons = { releases: Disc3, top90: Sparkles, achievements: Award, concerts: Ticket, faq: CircleHelp };
+const tabIcons = { releases: Disc3, artists: Mic2, top90: Sparkles, achievements: Award, concerts: Ticket, faq: CircleHelp };
 
 interface NavbarProps {
   onOpenAuth: (mode: 'login' | 'register') => void;

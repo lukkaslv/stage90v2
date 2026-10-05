@@ -96,10 +96,11 @@ export interface Review {
   isVerified?: boolean;
 }
 
-export type PageId = 'releases' | 'top90' | 'achievements' | 'concerts' | 'faq';
+export type PageId = 'releases' | 'artists' | 'top90' | 'achievements' | 'concerts' | 'faq';
 
 export const categoryTabs: { id: PageId; label: string }[] = [
   { id: 'releases', label: 'რელიზები' },
+  { id: 'artists', label: 'არტისტები' },
   { id: 'top90', label: 'ტოპ-90' },
   { id: 'achievements', label: 'მიღწევები' },
   { id: 'concerts', label: 'კონცერტები' },

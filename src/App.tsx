@@ -7,6 +7,7 @@ import ReleaseCard from '@/components/ReleaseCard';
 import MediaReviews from '@/components/MediaReviews';
 import RecentReviewsFeed from '@/components/RecentReviewsFeed';
 import Top15AllTime from '@/components/Top15AllTime';
+import TopArtists from '@/components/TopArtists';
 import AuthorsPicks from '@/components/AuthorsPicks';
 import AuthorComments from '@/components/AuthorComments';
 import NewNamesSection from '@/components/NewNamesSection';
@@ -37,24 +38,27 @@ const AdminDashboard = lazy(() => import('@/components/AdminDashboard'));
 const PlatformAboutModal = lazy(() => import('@/components/PlatformAboutModal'));
 const FAQPage = lazy(() => import('@/components/FAQPage'));
 const ReactionOutput = lazy(() => import('@/components/ReactionOutput'));
+const ArtistProfile = lazy(() => import('@/components/ArtistProfile'));
 
 function pathState() {
   const path = window.location.pathname.replace(/\/$/, '') || '/';
   const section = (Object.entries(sectionPaths).find(([, value]) => value === path)?.[0] ?? null) as SectionId | null;
   const release = path.match(/^\/releases\/([^/]+)$/);
   const review = path.match(/^\/reviews\/([^/]+)$/);
-  const tab = path === '/top-90' ? 'top90' : path === '/achievements' ? 'achievements' : path === '/concerts' ? 'concerts' : path === '/faq' ? 'faq' : 'releases';
-  const known = path === '/' || Boolean(section || release || review) || Object.values(tabPaths).includes(path);
-  return { section, release: release ? decodeURIComponent(release[1]) : null, review: review ? decodeURIComponent(review[1]) : null, tab: tab as PageId, unknown: !known };
+  const artist = path.match(/^\/artists\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i);
+  const tab = path === '/artists' || artist ? 'artists' : path === '/top-90' ? 'top90' : path === '/achievements' ? 'achievements' : path === '/concerts' ? 'concerts' : path === '/faq' ? 'faq' : 'releases';
+  const known = path === '/' || Boolean(section || release || review || artist) || Object.values(tabPaths).includes(path);
+  return { section, release: release ? decodeURIComponent(release[1]) : null, review: review ? decodeURIComponent(review[1]) : null, artist: artist?.[1] ?? null, tab: tab as PageId, unknown: !known };
 }
 
-const tabPaths: Record<PageId, string> = { releases: '/', top90: '/top-90', achievements: '/achievements', concerts: '/concerts', faq: '/faq' };
+const tabPaths: Record<PageId, string> = { releases: '/', artists: '/artists', top90: '/top-90', achievements: '/achievements', concerts: '/concerts', faq: '/faq' };
 
 function AppContent() {
   const { user } = useAuth();
   const { startTransition } = usePageLoading();
   const [selectedRelease, setSelectedRelease] = useState<Release | string | null>(() => pathState().release);
   const [selectedReview, setSelectedReview] = useState<string | null>(() => pathState().review);
+  const [selectedArtist, setSelectedArtist] = useState<string | null>(() => pathState().artist);
   const [section, setSection] = useState<SectionId | null>(() => pathState().section);
   const [releaseHistory, setReleaseHistory] = useState<Array<Release | string>>([]);
   const [authMode, setAuthMode] = useState<AuthMode | null>(() => new URLSearchParams(window.location.search).has('stage90_invite') ? 'invite' : null);
@@ -77,6 +81,7 @@ function AppContent() {
     const next = pathState();
     setSelectedRelease(next.release);
     setSelectedReview(next.review);
+    setSelectedArtist(next.artist);
     setSection(next.section);
     setActiveTab(next.tab);
     setUnknownPath(next.unknown);
@@ -86,6 +91,7 @@ function AppContent() {
   const openTrackRelease = (nextRelease: Release) => { void startTransition(() => { if (selectedRelease) setReleaseHistory((history) => [...history, selectedRelease]); navigate(`/releases/${encodeURIComponent(String(nextRelease.id))}`); setSelectedRelease(nextRelease); }); };
   const returnFromRelease = () => { if (window.history.state?.stage90) window.history.back(); else navigate('/'); };
   const openReview = (id: string) => { void startTransition(() => navigate(`/reviews/${encodeURIComponent(id)}`)); };
+  const openArtist = (id: string) => { void startTransition(() => navigate(`/artists/${encodeURIComponent(id)}`)); };
   const openSection = (next: SectionId) => { void startTransition(() => navigate(sectionPaths[next])); };
   const handleTabChange = (tab: PageId) => {
     void startTransition(() => {
@@ -96,6 +102,8 @@ function AppContent() {
   const handleAdminOpen = () => {
     void startTransition(() => {
       setSelectedRelease(null);
+      setSelectedReview(null);
+      setSelectedArtist(null);
       setReleaseHistory([]);
       setAdminMode(true);
     });
@@ -172,6 +180,7 @@ function AppContent() {
       const next = pathState();
       setSelectedRelease(next.release);
       setSelectedReview(next.review);
+      setSelectedArtist(next.artist);
       setSection(next.section);
       setActiveTab(next.tab);
       setUnknownPath(next.unknown);
@@ -183,7 +192,7 @@ function AppContent() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [activeTab, selectedRelease, selectedReview, section, adminMode]);
+  }, [activeTab, selectedRelease, selectedReview, selectedArtist, section, adminMode]);
 
   if (selectedRelease) {
     return (
@@ -199,6 +208,7 @@ function AppContent() {
             onBack={returnFromRelease}
             onOpenRelease={openTrackRelease}
             onOpenReview={openReview}
+            onOpenArtist={openArtist}
             backToRelease={releaseHistory.length > 0}
             onOpenAuth={() => setAuthMode('login')}
             onReviewSubmitted={onReviewSubmitted}
@@ -210,6 +220,20 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  if (selectedArtist) {
+    return <div className="min-h-screen bg-[#0a0a0c]">
+      <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab="artists" onTabChange={handleTabChange} onOpenRelease={openRelease} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
+      <div className={contentClass}>
+        {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
+        {maintenanceMap.artists?.is_maintenance
+          ? <MaintenancePlaceholder tabTitle={maintenanceMap.artists.tab_title} customMessage={maintenanceMap.artists.message_geo} />
+          : <Suspense fallback={<SectionLoader />}><ArtistProfile key={selectedArtist} id={selectedArtist} onBack={() => handleTabChange('artists')} onReleaseClick={openRelease} /></Suspense>}
+        <SiteFooter onFaq={() => handleTabChange('faq')} onAbout={() => setShowAbout(true)} />
+        {authMode && <Suspense fallback={<SectionLoader onClose={() => setAuthMode(null)} />}><AuthModal initialMode={authMode} onClose={() => setAuthMode(null)} /></Suspense>}
+      </div>
+    </div>;
   }
 
   if (selectedReview) {
@@ -229,7 +253,7 @@ function AppContent() {
       <Navbar onOpenAuth={setAuthMode} onOpenAbout={() => setShowAbout(true)} onBrandClick={() => handleTabChange('releases')} activeTab={activeTab} section={section} unknownPath={unknownPath} onTabChange={handleTabChange} onOpenRelease={openRelease} onAdminOpen={handleAdminOpen} collapsed={sidebarCollapsed} onToggleCollapsed={toggleSidebar} />
       <div className={contentClass}>
       {showAbout && <Suspense fallback={<SectionLoader onClose={() => setShowAbout(false)} />}><PlatformAboutModal onClose={() => setShowAbout(false)} /></Suspense>}
-      {adminMode && user?.role === 'admin' ? <Suspense fallback={<SectionLoader />}><AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => setAdminMode(false)} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} /></Suspense> : null}
+      {adminMode && user?.role === 'admin' ? <Suspense fallback={<SectionLoader />}><AdminDashboard maintenance={maintenanceMap} onMaintenanceChange={setMaintenanceMap} onBack={() => { setAdminMode(false); navigate(tabPaths[activeTab]); }} onRefresh={handleRefresh} onReleaseCreated={handleRefresh} onArtistClick={openArtist} /></Suspense> : null}
 
       {!adminMode && unknownPath && <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8"><PageHeading title="გვერდი ვერ მოიძებნა" description="მითითებულ მისამართზე გვერდი არ არსებობს." /><button type="button" onClick={() => handleTabChange('releases')} className="stage-outline-action">მთავარ გვერდზე დაბრუნება →</button></main>}
       {!adminMode && !unknownPath && maintenanceMap[activeTab]?.is_maintenance && <MaintenancePlaceholder tabTitle={maintenanceMap[activeTab].tab_title} customMessage={maintenanceMap[activeTab].message_geo} />}
@@ -240,6 +264,7 @@ function AppContent() {
           ? <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8"><PageHeading title="ტოპ-15 ქულებით" /><Top15AllTime onReleaseClick={openRelease} /></main>
           : <SectionPage key={section} section={section} onReleaseClick={openRelease} onReviewClick={openReview} />)}
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'top90' && <Suspense fallback={<SectionLoader />}><Top90Leaderboard /></Suspense>}
+      {!adminMode && !maintenanceMap.artists?.is_maintenance && activeTab === 'artists' && <TopArtists onArtistClick={openArtist} />}
 
       {!adminMode && !maintenanceMap[activeTab]?.is_maintenance && activeTab === 'achievements' && <Suspense fallback={<SectionLoader />}><Achievements /></Suspense>}
 
@@ -277,6 +302,11 @@ function AppContent() {
             {homeSectionVisible('score-top-15') && <div className="space-y-2">
               <button type="button" onClick={() => openSection('score-top-15')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველას ნახვა →</button>
               <Top15AllTime onReleaseClick={openRelease} preview />
+            </div>}
+
+            {!maintenanceMap.artists?.is_maintenance && <div className="space-y-2">
+              <button type="button" onClick={() => handleTabChange('artists')} className="block w-full text-right text-sm font-semibold text-blue-300">ყველა არტისტის ნახვა →</button>
+              <TopArtists onArtistClick={openArtist} preview />
             </div>}
 
             {homeSectionVisible('author-picks') && <div className="space-y-2">

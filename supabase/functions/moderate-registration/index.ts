@@ -72,7 +72,7 @@ Deno.serve(async (request) => {
     artist_name: application.requested_role === 'author' ? application.display_name : null,
     verification_link: application.social_url,
     role: application.requested_role,
-    is_verified: application.requested_role === 'author',
+    is_verified: true,
   }, { onConflict: 'id' });
   if (profileError) {
     await client.auth.admin.deleteUser(invitation.user.id);
