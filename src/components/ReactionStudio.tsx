@@ -267,7 +267,7 @@ function StudioArtistCard({ artist }: { artist: RankedArtist }) {
   const tier = artistTierFromRank(artist.rank);
   return <div className={`flex w-48 shrink-0 items-center gap-2 border border-[#343844] bg-[#191d27] p-2 stage-artist-${tier?.key ?? 'spark'}`}>
     <span className="text-sm font-black text-blue-300">{String(artist.rank).padStart(2, '0')}</span>
-    <ArtistPortrait src={artist.photo_url} className="h-10 w-10 rounded-full" />
+    <ArtistPortrait src={artist.photo_url} className="h-10 w-10" />
     <span className="min-w-0"><strong className="block truncate text-xs text-white">{artist.name}</strong><span className="block truncate text-[11px] text-gray-400">{artistPoints(artist.average_score)}/90 · {artist.rated_track_count} ტრეკი</span><span className="block truncate text-[11px] font-bold" style={{ color: 'var(--artist-color)' }}>{tier?.label}</span></span>
   </div>;
 }

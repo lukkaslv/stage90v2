@@ -73,9 +73,8 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
                   const tier = artistTierFromRank(artist.rank);
                   return <li key={artist.id} data-artist-tier={tier?.key} aria-label={`${artist.rank}. ${artist.name}, ${tier?.label ?? ''}, საშუალო ${artistPoints(artist.average_score)} ქულა 90-დან, ${artist.rated_track_count} შეფასებული ტრეკი`} className="reaction-top-item flex min-w-0 items-center">
                     <span className="reaction-rank shrink-0 font-black tabular-nums">{String(artist.rank).padStart(2, '0')}</span>
-                    <ArtistPortrait src={artist.photo_url} className="reaction-top-cover rounded-full" />
-                    <span className="reaction-top-copy min-w-0"><strong className="text-white">{artist.name}</strong><span className="reaction-supporting block truncate">{artistPoints(artist.average_score)}/90 · {artist.rated_track_count} ტრეკი</span></span>
-                    <span className="stage-rank-status stage-rank-status-compact reaction-artist-tier">{tier?.label}</span>
+                    <ArtistPortrait src={artist.photo_url} className="reaction-top-cover" />
+                    <span className="reaction-top-copy min-w-0"><strong className="text-white">{artist.name}</strong><span className="reaction-supporting block truncate">{artistPoints(artist.average_score)}/90 · {artist.rated_track_count} ტრეკი</span><span className="stage-rank-status stage-rank-status-compact reaction-artist-tier">{tier?.label}</span></span>
                   </li>;
                 })}
               </ol>
