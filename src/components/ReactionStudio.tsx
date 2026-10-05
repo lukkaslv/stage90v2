@@ -144,8 +144,6 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
       setSelectedReleaseId(changedView.release.id);
       setDraftParams(changedView.params);
       setDraftVibe(changedView.vibe);
-      setCommentAuthor(changedView.comment?.author ?? '');
-      setCommentText(changedView.comment?.text ?? '');
       setCommentMessage('');
     } else setMessage('რელიზის ჩატვირთვა ვერ მოხერხდა.');
     setBusy(false);
@@ -241,7 +239,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
         </div>
         <div className="border border-[#343844] bg-[#12151d] p-4">
           <div className="flex items-center justify-between gap-3"><h3 className="font-bold text-white">მაყურებლის კომენტარი</h3><span className={`text-xs font-bold ${view?.comment?.visible ? 'text-emerald-300' : 'text-gray-400'}`}>{view?.comment?.visible ? 'დამაგრებულია' : 'დამალულია'}</span></div>
-          <p className="mt-1 text-xs text-gray-400">კომენტარი ვიდეოს ქვემოთ გამოჩნდება და დარჩება, სანამ დამალავთ ან რელიზს შეცვლით.</p>
+          <p className="mt-1 text-xs text-gray-400">რელიზის შეცვლისას კომენტარი ეთერიდან დაიმალება, მაგრამ შეყვანილი ტექსტი შენარჩუნდება.</p>
           <label className="mt-4 block text-xs font-semibold text-gray-300">ავტორის სახელი<input type="text" maxLength={60} value={commentAuthor} onChange={(event) => setCommentAuthor(event.target.value)} placeholder="მაყურებლის სახელი" className="mt-1.5 w-full border border-gray-600 bg-[#0b0d16] px-3 py-2.5 text-sm text-white" /></label>
           <label className="mt-3 block text-xs font-semibold text-gray-300">კომენტარის ტექსტი<textarea maxLength={160} rows={3} value={commentText} onChange={(event) => setCommentText(event.target.value)} placeholder="ჩასვით მაყურებლის კომენტარი" className="mt-1.5 w-full resize-y border border-gray-600 bg-[#0b0d16] px-3 py-2.5 text-sm text-white" /></label>
           <p className="mt-1 text-right text-xs text-gray-400">{commentText.length}/160</p>
