@@ -1,5 +1,22 @@
 export type ReactionScene = 'intro' | 'tracks' | 'score';
 export type ReactionChartType = 'tracks' | 'artists';
+export type ReactionOutputScene = 'listen' | 'discussion' | 'tracks' | 'artists';
+
+export const reactionScenes: { id: ReactionOutputScene; state: ReactionScene; label: string; description: string }[] = [
+  { id: 'listen', state: 'intro', label: 'მოსმენა', description: 'დიდი ვიდეო და კამერა მარჯვნივ' },
+  { id: 'discussion', state: 'score', label: 'განხილვა და შეფასება', description: 'რელიზი, საბოლოო ქულა და ვერტიკალური კამერა' },
+  { id: 'tracks', state: 'tracks', label: 'ტოპ-15 ტრეკი', description: 'ტრეკების სრული რეიტინგი და ვერტიკალური კამერა' },
+  { id: 'artists', state: 'tracks', label: 'ტოპ-15 არტისტი', description: 'არტისტების სრული რეიტინგი და ვერტიკალური კამერა' },
+];
+
+export function reactionSceneFromParam(value: string | null): ReactionOutputScene | undefined {
+  return reactionScenes.find((scene) => scene.id === value)?.id;
+}
+
+export function reactionSceneFromView(scene: ReactionScene, chartType?: ReactionChartType): ReactionOutputScene {
+  if (scene === 'tracks' && chartType === 'artists') return 'artists';
+  return reactionScenes.find((entry) => entry.state === scene)?.id ?? 'listen';
+}
 
 export interface ReactionRelease {
   id: string;
@@ -52,6 +69,6 @@ export function reactionCommentInitial(author: string): string {
   return Array.from(author.trim().replace(/^@/, ''))[0]?.toLocaleUpperCase() ?? '•';
 }
 
-export function reactionOutputUrl(token: string): string {
-  return `${window.location.origin}/studio/obs?token=${encodeURIComponent(token)}`;
+export function reactionOutputUrl(token: string, scene?: ReactionOutputScene): string {
+  return `${window.location.origin}/studio/obs?token=${encodeURIComponent(token)}${scene ? `&scene=${scene}` : ''}`;
 }
