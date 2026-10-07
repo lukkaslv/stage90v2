@@ -81,11 +81,11 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
       <section className="reaction-top reaction-artist-chart flex h-[14%] shrink-0 flex-col" aria-label="ტოპ-5 არტისტი">
         <div className="reaction-top-heading flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-[.7cqw]"><span className="reaction-section-marker" /><h2 className="font-black">ტოპ-5 არტისტი</h2></div>
-          <span className="reaction-top-live flex shrink-0 items-center gap-[.55cqw]">{artistsLive && !artistsError && visibleArtists.length > 0 && <LiveRankingIndicator iconOnly />}<span className="reaction-supporting">{visibleArtists.length}/5 · 5+ ტრეკი</span></span>
+          <span className="reaction-top-live flex shrink-0 items-center gap-[.55cqw]">{artistsLive && !artistsError && visibleArtists.length > 0 && <LiveRankingIndicator iconOnly />}<span className="reaction-supporting">{visibleArtists.length}/5 · 3+ ტრეკი</span></span>
         </div>
         {artistsLoading && visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგი იტვირთება...</p>
           : artistsError && visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center text-amber-300">არტისტების რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p>
-            : visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგში ჯერ არ არის არტისტი 5 შეფასებული ტრეკით.</p>
+            : visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგში ჯერ არ არის არტისტი 3 შეფასებული ტრეკით.</p>
               : <ol className="reaction-top-list reaction-artist-list grid min-h-0 flex-1">
                 {visibleArtists.map((artist) => {
                   const tier = artistTierFromRank(artist.rank);

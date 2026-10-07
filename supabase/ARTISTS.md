@@ -1,9 +1,10 @@
 # Artist profiles and live rankings
 
 Migrations: `migrations/20261005000005_artist_profiles.sql`, then
-`migrations/20261005000006_artist_average_ranking.sql`.
+`migrations/20261005000006_artist_average_ranking.sql`, then
+`migrations/20261007000002_artist_three_track_ranking.sql`.
 
-Apply both migrations in order before publishing the frontend. The first extends the existing `artists`
+Apply these migrations in order before publishing the frontend. The first extends the existing `artists`
 directory, retaining IDs, slugs, image URLs and other legacy fields/relations. Existing
 HTTPS image URLs are copied to `photo_url`; new slugs default to a generated unique ID.
 Do not replay unrelated historical migrations to install this feature.
@@ -28,7 +29,7 @@ may belong to multiple artists. Removing an artist removes associations, not rel
 - Album/EP/mixtape containers and releases with children add no separate points.
 - Unrated tracks do not affect the average or receive release tier badges.
 - Collaborations contribute their full track score once to each linked artist.
-- Profiles with fewer than five scored tracks are listed in the directory with no rank/status.
+- Profiles with fewer than three scored tracks are listed in the directory with no rank/status.
 - Sort by the exact average descending, scored track count descending, profile creation
   time ascending, then ID ascending for deterministic ties. Show the first 15 in the chart.
 - Status follows rank: 1 legend, 2–3 superstar, 4–7 star, 8–11 rising, 12+ spark.
@@ -49,7 +50,7 @@ release tiers and account role badges.
 
 `npm test` executes the actual migration in disposable PostgreSQL (PGlite), covering
 UUID/bigint release IDs, legacy artists compatibility, deduplication, score changes,
-the five-track threshold and average ordering, unrated/hidden records, cascading links,
+the three-track threshold and average ordering, unrated/hidden records, cascading links,
 atomic validation, concurrent edits, public
 visibility and admin-only mutation/storage policies. No test records enter Supabase.
 

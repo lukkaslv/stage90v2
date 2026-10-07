@@ -193,8 +193,8 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     </div>
 
     <div className="border border-[#343844] bg-[#12151d] p-4">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold text-white">ტოპ-5 არტისტი</h3><p className="text-xs text-gray-500">საშუალო ქულით · მინიმუმ 5 შეფასებული ტრეკი</p></div><span className="text-xs text-gray-500">{visibleArtists.length}/5</span></div>
-      {artistsLoading && !artistTop ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : artistsError && !artistTop ? <p className="py-5 text-sm text-amber-300">არტისტების რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : visibleArtists.length === 0 ? <p className="py-5 text-sm text-gray-400">რეიტინგში ჯერ არ არის არტისტი 5 შეფასებული ტრეკით.</p> : <div className="grid gap-2 overflow-x-auto pb-2" style={{ gridTemplateColumns: 'repeat(5, minmax(180px, 1fr))' }}>{visibleArtists.map((artist) => <StudioArtistCard key={artist.id} artist={artist} />)}</div>}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-bold text-white">ტოპ-5 არტისტი</h3><p className="text-xs text-gray-500">საშუალო ქულით · მინიმუმ 3 შეფასებული ტრეკი</p></div><span className="text-xs text-gray-500">{visibleArtists.length}/5</span></div>
+      {artistsLoading && !artistTop ? <p className="py-5 text-sm text-gray-400">მონაცემები იტვირთება...</p> : artistsError && !artistTop ? <p className="py-5 text-sm text-amber-300">არტისტების რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : visibleArtists.length === 0 ? <p className="py-5 text-sm text-gray-400">რეიტინგში ჯერ არ არის არტისტი 3 შეფასებული ტრეკით.</p> : <div className="grid gap-2 overflow-x-auto pb-2" style={{ gridTemplateColumns: 'repeat(5, minmax(180px, 1fr))' }}>{visibleArtists.map((artist) => <StudioArtistCard key={artist.id} artist={artist} />)}</div>}
     </div>
 
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,.8fr)]">
