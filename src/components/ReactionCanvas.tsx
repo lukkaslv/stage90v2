@@ -25,7 +25,7 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
   const { data: artistTop, loading: artistsLoading, error: artistsError, live: artistsLive } = useTopArtistRankings();
   const [fallbackVideos, setFallbackVideos] = useState<Record<string, string | null>>({});
   const { release, tracks } = view;
-  const selectedTrack = tracks.find((track) => track.id === view.track_id);
+  const selectedTrack = tracks.find((track) => String(track.id) === view.track_id);
   const currentTopReleaseId = view.scene === 'tracks' && selectedTrack ? selectedTrack.id : release.id;
   const releaseId = String(release.id);
   const trackId = selectedTrack ? String(selectedTrack.id) : null;
