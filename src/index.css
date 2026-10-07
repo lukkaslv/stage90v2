@@ -161,7 +161,7 @@ body {
 .reaction-top-item::before { content: ''; position: absolute; inset: 0 auto 0 0; width: .18cqw; background: rgb(var(--tier-rgb)); }
 .reaction-top-item > * { position: relative; z-index: 1; }
 .reaction-top-item-current { outline: .1cqw solid rgb(var(--tier-rgb)); outline-offset: -.1cqw; box-shadow: 0 0 .75cqw rgba(var(--tier-rgb), .55), 0 0 1.25cqw rgba(var(--tier-rgb), .23), inset 0 0 0 1px rgba(var(--tier-rgb), .4); }
-.reaction-top-item strong { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.2; overflow-wrap: anywhere; }
+.reaction-top-item strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.2; }
 .reaction-rank { position: absolute !important; top: .35cqw; left: .5cqw; z-index: 2 !important; border: 1px solid rgba(var(--tier-rgb), .75); background: #0c0d11; color: rgb(var(--tier-rgb)); padding: .06cqw .2cqw; font-family: 'Archivo Black', 'Noto Sans Georgian', sans-serif; font-size: .75cqw; letter-spacing: -.04em; }
 .reaction-top-cover { grid-column: 1; grid-row: 1 / 3; width: 2.6cqw; height: 2.6cqw; border: 1px solid rgba(var(--tier-rgb), .65); }
 .reaction-top-item > .stage-artist-portrait { border-color: rgba(var(--tier-rgb), .65); border-radius: 0; }
@@ -188,7 +188,7 @@ body {
 .reaction-top-list[data-density="dense"] .reaction-top-cover { width: 2.15cqw; height: 2.15cqw; }
 .reaction-top-list[data-density="dense"] .reaction-top-item .reaction-supporting { font-size: .57cqw; }
 .reaction-top-list[data-density="dense"] .reaction-top-item > .stage-rank-status { font-size: .6cqw; }
-.reaction-top-copy { grid-column: 2; grid-row: 1; min-width: 0; align-self: center; }
+.reaction-top-copy { grid-column: 2; grid-row: 1; min-width: 0; max-height: 100%; overflow: hidden; align-self: center; }
 .reaction-top-leader-label { display: block; overflow: hidden; margin-bottom: .18cqw; border-left: .12cqw solid #ff2299; padding-left: .25cqw; color: #ffa2ce; font-size: .66cqw; font-weight: 900; line-height: 1.15; white-space: nowrap; }
 .reaction-top-list[data-density="dense"] .reaction-top-leader-label { font-size: .52cqw; }
 .reaction-top-live .stage-live-indicator { font-size: .8cqw; }
