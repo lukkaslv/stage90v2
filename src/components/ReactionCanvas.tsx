@@ -89,8 +89,7 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
                   return <li key={String(rankedRelease.id)} data-tier={tier ?? undefined} aria-label={`${index + 1}. ${rankedRelease.title}, ${tier ?? ''}, ${rankedRelease.overall_score} ქულა 90-დან${leaderLabel ? `, ${leaderLabel}` : ''}`} className={`reaction-top-item flex min-w-0 items-center ${String(rankedRelease.id) === String(currentTopReleaseId) ? 'reaction-top-item-current' : ''}`}>
                     <span className="reaction-rank shrink-0 font-black tabular-nums">{String(index + 1).padStart(2, '0')}</span>
                     {rankedRelease.coverUrl ? <img src={rankedRelease.coverUrl} alt="" className="reaction-top-cover aspect-square shrink-0 object-cover" /> : <Music2 className="reaction-top-cover shrink-0 text-gray-500" />}
-                    <span className="reaction-top-copy min-w-0">{leaderLabel && <span className="reaction-top-leader-label">{leaderLabel}</span>}<strong className="text-white">{rankedRelease.title}</strong><span className="reaction-supporting block truncate">{rankedRelease.overall_score}/90</span></span>
-                    {!leaderLabel && <RankMovementBadge rank={index + 1} movement={rankMovement} compact micro={topColumns > 5} />}
+                    <span className="reaction-top-copy min-w-0"><strong className="text-white">{rankedRelease.title}</strong><span className="reaction-top-metrics"><span className="reaction-supporting">{rankedRelease.overall_score}/90</span>{leaderLabel ? <span className="reaction-top-leader-label">{leaderLabel}</span> : <RankMovementBadge rank={index + 1} movement={rankMovement} compact micro={topColumns > 5} />}</span></span>
                   </li>;
                 })}
               </ol>}
