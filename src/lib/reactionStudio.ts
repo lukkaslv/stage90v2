@@ -32,8 +32,7 @@ export interface ReactionView {
   scene: ReactionScene;
   chart_type: ReactionChartType;
   track_id: string | null;
-  params: number[];
-  vibe: number;
+  score: number;
   revealed: boolean;
   comment?: ReactionComment;
   expires_at: string;

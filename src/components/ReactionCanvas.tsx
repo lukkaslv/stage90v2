@@ -15,7 +15,7 @@ import ArtistPortrait from '@/components/ArtistPortrait';
 
 interface ReactionCanvasProps {
   view: ReactionView;
-  onRatingChange?: (params: number[], vibe: number) => void;
+  onRatingChange?: (score: number) => void;
   onRatingSubmit?: () => void;
   submittingRating?: boolean;
   saveStatus?: string;
@@ -113,7 +113,7 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
           {view.scene === 'tracks' && <p className="reaction-track truncate font-semibold">{selectedTrack ? `მიმდინარე ტრეკი: ${selectedTrack.title}` : 'აირჩიეთ ტრეკი სტუდიაში'}</p>}
         </section>
 
-        <ReactionRatingPanel params={view.params} vibe={view.vibe} revealed={view.revealed} onChange={submittingRating ? undefined : onRatingChange} onSubmit={onRatingSubmit} submitting={submittingRating} saveStatus={saveStatus} />
+        <ReactionRatingPanel score={view.score} revealed={view.revealed} onChange={submittingRating ? undefined : onRatingChange} onSubmit={onRatingSubmit} submitting={submittingRating} saveStatus={saveStatus} />
       </div>
     </div>
     <div className="absolute inset-y-0 right-0 w-[28%]" aria-hidden="true" />

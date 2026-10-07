@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, ExternalLink, Eye, EyeOff, Music2, Radio, RotateCcw, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { computeRZTScore, RZT_PARAMS, VIBE_LEVELS } from '@/types/music';
+import SingleScoreInput from '@/components/SingleScoreInput';
 import { useAllTimeTop15 } from '@/hooks/useAllTimeTop15';
 import { useTopArtistRankings } from '@/hooks/useTopArtistRankings';
 import { artistPoints, artistTierFromRank } from '@/lib/artistRank';
@@ -18,8 +18,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   const [session, setSession] = useState<ReactionSession | null>(null);
   const [view, setView] = useState<ReactionView | null>(null);
   const [selectedReleaseId, setSelectedReleaseId] = useState('');
-  const [draftParams, setDraftParams] = useState([5, 5, 5, 5]);
-  const [draftVibe, setDraftVibe] = useState(3);
+  const [draftScore, setDraftScore] = useState(45);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [commentAuthor, setCommentAuthor] = useState('');
@@ -35,8 +34,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   const trackPlayerUrl = youtubeEmbedUrl(selectedTrack?.youtube_url);
   const playerUrl = trackPlayerUrl ?? youtubeEmbedUrl(selectedRelease?.youtube_url);
   const videoRelease = trackPlayerUrl ? selectedTrack : selectedRelease;
-  const score = computeRZTScore(draftParams, draftVibe);
-  const hasDraftChanges = Boolean(view && (draftVibe !== view.vibe || draftParams.some((value, index) => value !== view.params[index])));
+  const hasDraftChanges = Boolean(view && draftScore !== view.score);
   const sessionToken = session?.token;
 
   useEffect(() => {
@@ -58,8 +56,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
       setSession(saved);
       setView(restored);
       setSelectedReleaseId(restored.release.id);
-      setDraftParams(restored.params);
-      setDraftVibe(restored.vibe);
+      setDraftScore(restored.score);
       setCommentAuthor(restored.comment?.author ?? '');
       setCommentText(restored.comment?.text ?? '');
     });
@@ -75,8 +72,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
       const next = data as unknown as ReactionView;
       setView(next);
       setSelectedReleaseId(next.release.id);
-      setDraftParams(next.params);
-      setDraftVibe(next.vibe);
+      setDraftScore(next.score);
     };
     const timer = window.setInterval(() => { void refresh(); }, 1000);
     return () => { cancelled = true; window.clearInterval(timer); };
@@ -94,8 +90,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     const createdView = result.data as unknown as ReactionView;
     setSession(created);
     setView(createdView);
-    setDraftParams(createdView.params);
-    setDraftVibe(createdView.vibe);
+    setDraftScore(createdView.score);
     setCommentAuthor(createdView.comment?.author ?? '');
     setCommentText(createdView.comment?.text ?? '');
     setBusy(false);
@@ -107,7 +102,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('reaction_session_update', {
       p_id: session.id, p_release_id: next.release.id, p_scene: next.scene,
-      p_track_id: next.track_id, p_params: next.params, p_vibe: next.vibe, p_revealed: next.revealed,
+      p_track_id: next.track_id, p_score: next.score, p_revealed: next.revealed,
     });
     if (error || !data) { setMessage('ცვლილება ვერ შეინახა. სცადეთ ხელახლა.'); setBusy(false); return; }
     const refreshed = await supabase.rpc('reaction_session_view', { p_token: session.token });
@@ -134,7 +129,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     setBusy(true); setMessage('');
     const { data, error } = await supabase.rpc('reaction_session_update', {
       p_id: session.id, p_release_id: id, p_scene: 'intro', p_track_id: null,
-      p_params: [5, 5, 5, 5], p_vibe: 3, p_revealed: true,
+      p_score: 45, p_revealed: true,
     });
     if (error || !data) { setMessage('რელიზის შეცვლა ვერ მოხერხდა.'); setBusy(false); return; }
     const refreshed = await supabase.rpc('reaction_session_view', { p_token: session.token });
@@ -142,8 +137,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
       const changedView = refreshed.data as unknown as ReactionView;
       setView(changedView);
       setSelectedReleaseId(changedView.release.id);
-      setDraftParams(changedView.params);
-      setDraftVibe(changedView.vibe);
+      setDraftScore(changedView.score);
       setCommentMessage('');
     } else setMessage('რელიზის ჩატვირთვა ვერ მოხერხდა.');
     setBusy(false);
@@ -248,12 +242,11 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
           {commentMessage && <p role="status" className="mt-3 text-xs text-amber-300">{commentMessage}</p>}
         </div>
         {session && view && <div className="border border-[#343844] bg-[#12151d] p-4">
-          <div className="mb-4 flex items-center justify-between gap-3"><div><h3 className="font-bold text-white">პირადი შეფასება</h3><p className="text-xs text-gray-500">ცვლილება ეკრანზე გამოჩნდება გაგზავნის შემდეგ</p></div><strong className="shrink-0 text-3xl font-black tabular-nums text-white">{score}<small className="text-sm text-gray-500">/90</small></strong></div>
-          <div className="space-y-3">{RZT_PARAMS.map((param, index) => <label key={param.id} className="block border border-gray-700 p-3 text-sm text-gray-300"><span className="flex justify-between"><span>{param.label}</span><strong className="tabular-nums text-white">{draftParams[index]}/10</strong></span><input type="range" min="1" max="10" value={draftParams[index]} disabled={busy} onChange={(event) => setDraftParams((previous) => previous.map((point, pointIndex) => pointIndex === index ? Number(event.target.value) : point))} className="mt-3 w-full accent-blue-400" /></label>)}</div>
-          <label className="mt-3 block border border-gray-700 p-3 text-sm text-gray-300"><span className="flex justify-between gap-2"><span>ატმოსფერო</span><strong className="text-right text-white">{VIBE_LEVELS[draftVibe - 1]}</strong></span><input type="range" min="1" max="5" value={draftVibe} disabled={busy} onChange={(event) => setDraftVibe(Number(event.target.value))} className="mt-3 w-full accent-pink-400" /></label>
+          <div className="mb-4 flex items-center justify-between gap-3"><div><h3 className="font-bold text-white">პირადი შეფასება</h3><p className="text-xs text-gray-500">ცვლილება ეკრანზე გამოჩნდება გაგზავნის შემდეგ</p></div><strong className="shrink-0 text-3xl font-black tabular-nums text-white">{draftScore}<small className="text-sm text-gray-500">/90</small></strong></div>
+          <SingleScoreInput id="studio-score" score={draftScore} onChange={setDraftScore} disabled={busy} />
           <p className={`mt-3 flex items-center gap-1.5 text-xs ${hasDraftChanges ? 'text-amber-300' : 'text-emerald-300'}`}>{hasDraftChanges ? 'შეუნახავი ცვლილებები' : <><Check className="h-3.5 w-3.5" />შეფასება შენახულია</>}</p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2"><button type="button" onClick={() => void updateView({ params: draftParams, vibe: draftVibe })} disabled={busy || !hasDraftChanges} className="border border-blue-400 px-4 py-2.5 text-sm font-bold text-blue-200 disabled:opacity-50">შეფასების გაგზავნა</button><button type="button" onClick={() => void updateView({ scene: 'score', params: draftParams, vibe: draftVibe, revealed: !view.revealed })} disabled={busy} className="inline-flex items-center justify-center gap-2 bg-blue-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{view.revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{view.revealed ? 'შეფასების დამალვა' : 'შეფასების გამოჩენა'}</button></div>
-          <button type="button" onClick={() => { if (hasDraftChanges && !window.confirm('შეუნახავი შეფასება დაიკარგება. დავიწყოთ თავიდან?')) return; setDraftParams([5, 5, 5, 5]); setDraftVibe(3); void updateView({ params: [5, 5, 5, 5], vibe: 3, revealed: false }); }} disabled={busy} className="mt-3 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white disabled:opacity-50"><RotateCcw className="h-3.5 w-3.5" />თავიდან დაწყება</button>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2"><button type="button" onClick={() => void updateView({ score: draftScore })} disabled={busy || !hasDraftChanges} className="border border-blue-400 px-4 py-2.5 text-sm font-bold text-blue-200 disabled:opacity-50">შეფასების გაგზავნა</button><button type="button" onClick={() => void updateView({ scene: 'score', score: draftScore, revealed: !view.revealed })} disabled={busy} className="inline-flex items-center justify-center gap-2 bg-blue-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{view.revealed ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}{view.revealed ? 'შეფასების დამალვა' : 'შეფასების გამოჩენა'}</button></div>
+          <button type="button" onClick={() => { if (hasDraftChanges && !window.confirm('შეუნახავი შეფასება დაიკარგება. დავიწყოთ თავიდან?')) return; setDraftScore(45); void updateView({ score: 45, revealed: false }); }} disabled={busy} className="mt-3 inline-flex items-center gap-1 text-xs text-gray-400 hover:text-white disabled:opacity-50"><RotateCcw className="h-3.5 w-3.5" />თავიდან დაწყება</button>
         </div>}
       </div>
     </div>

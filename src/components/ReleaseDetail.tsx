@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef, type MouseEvent } from 'react';
+import { useState, useEffect, useCallback, useRef, type MouseEvent } from 'react';
 import { createPortal } from 'react-dom';
 import {
   ChevronRight,
@@ -21,18 +21,15 @@ import {
 } from 'lucide-react';
 import type { Release } from '@/types/music';
 import {
-  RZT_PARAMS,
-  VIBE_COEFFICIENTS,
-  VIBE_LEVELS,
   REVIEW_RULES,
   REVIEW_FORM_TABS,
-  computeRZTScore,
   releaseTypeLabel,
 } from '@/types/music';
 import { useAuth } from '@/context/auth-context';
 import { supabase } from '@/lib/supabase';
 import RoleBadge, { VerificationBadge } from '@/components/RoleBadge';
 import ScoreTriplet from '@/components/ScoreTriplet';
+import SingleScoreInput from '@/components/SingleScoreInput';
 import ReleaseArtists from '@/components/ReleaseArtists';
 import { releaseCommunityScore, releaseValueTier, STRICT_VALUE_TIER_CONFIG, valueTierFromScore } from '@/lib/valueTier';
 
@@ -124,8 +121,7 @@ function fallbackRelease(candidate: Release | string | null): Release | null {
 
 export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenReview, onOpenArtist, backToRelease = false, onOpenAuth, onReviewSubmitted }: ReleaseDetailProps) {
   const { isAuthenticated, user } = useAuth();
-  const [params, setParams] = useState<number[]>([5, 5, 5, 5]);
-  const [vibeLevel, setVibeLevel] = useState(3);
+  const [totalScore, setTotalScore] = useState(45);
   const [formTab, setFormTab] = useState<FormTab>('review');
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewText, setReviewText] = useState('');
@@ -237,11 +233,6 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     return () => { cancelled = true; };
   }, [activeRelease]);
 
-  const totalScore = useMemo(
-    () => computeRZTScore(params, vibeLevel),
-    [params, vibeLevel],
-  );
-
   const charCount = reviewText.length;
   const charMin = 300;
   const charMax = 8500;
@@ -337,10 +328,6 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     };
   }, [activeRelease, loadReviews]);
 
-  const handleParamChange = (index: number, value: number) => {
-    setParams((prev) => prev.map((p, i) => (i === index ? value : p)));
-  };
-
   const toggleAuthorLike = async (reviewId: string) => {
     if (!supabase || !user || authorLikePendingId || (user.role !== 'author' && user.role !== 'admin')) return;
     const alreadyLiked = authorLikedReviewIds.has(reviewId);
@@ -412,12 +399,12 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
       user_id: authenticatedUser.id,
       title: formTab === 'review' ? reviewTitle.trim() : existingReview?.title ?? (formTab === 'value' ? 'ღირებულების შეფასება' : 'შეფასება'),
       content: formTab === 'review' ? reviewText.trim() : existingReview?.body ?? '',
-      rhymes: params[0],
-      structure: params[1],
-      style: params[2],
-      individuality: params[3],
-      vibe: vibeLevel,
-      scoring_model: 'experience_v1',
+      rhymes: 5,
+      structure: 5,
+      style: 5,
+      individuality: 5,
+      vibe: 3,
+      scoring_model: 'holistic_v1',
       total_score: totalScore,
       media_url: formTab === 'review' ? (isMediaUser && mediaUrl.trim() ? mediaUrl.trim() : null) : existingReview?.mediaUrl ?? null,
       preview_image_url: formTab === 'review' ? (isMediaUser && previewImageUrl.trim() ? previewImageUrl.trim() : null) : existingReview?.previewImageUrl ?? null,
@@ -450,8 +437,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     }
 
     handleClear();
-    setParams([5, 5, 5, 5]);
-    setVibeLevel(3);
+    setTotalScore(45);
     await loadReviews();
     const { data: refreshedRelease } = await supabase.from('releases').select('*').eq('id', activeRelease.id).maybeSingle();
     if (refreshedRelease) setLoadedRelease(normalizeRelease(refreshedRelease as Record<string, unknown>));
@@ -691,79 +677,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 </div>
               </div>
 
-              {/* Base parameters */}
-              <div className="space-y-4">
-                <p className="text-xs font-medium tracking-wider text-gray-500">როგორ განიცდი ამ მუსიკას? შეაფასე თითოეული განცდა ცალ-ცალკე (1–10).</p>
-                {RZT_PARAMS.map((param, index) => (
-                  <div key={param.id}>
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <label htmlFor={`rzt-${param.id}`} className="text-sm text-gray-300">{param.label}</label>
-                      <span className="text-sm font-bold text-blue-400">{params[index]}</span>
-                    </div>
-                    <p className="mb-1 text-xs text-gray-400">{param.question}</p>
-                    <p className="mb-2 text-[11px] text-gray-600">{param.hint}</p>
-                    <input
-                      id={`rzt-${param.id}`}
-                      type="range"
-                      min={1}
-                      max={10}
-                      step={1}
-                      value={params[index]}
-                      onChange={(e) => handleParamChange(index, Number(e.target.value))}
-                      disabled={!isAuthenticated}
-                      className="rzt-slider disabled:opacity-40 disabled:cursor-not-allowed"
-                      style={{ ['--fill' as string]: `${((params[index] - 1) / 9) * 100}%` }}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Divider */}
-              <div className="my-5 h-px bg-[#1e1e24]" />
-
-              {/* Vibe parameter */}
-              <div>
-                <div className="mb-1.5 flex items-center justify-between">
-                  <label htmlFor="rzt-vibe" className="text-sm text-gray-300">ატმოსფერო</label>
-                  <span className="text-sm font-bold text-pink-400">
-                    {VIBE_LEVELS[vibeLevel - 1]}
-                  </span>
-                </div>
-                <p className="mb-2 text-xs text-gray-400">რამდენად მთლიან, გამომსახველ და ძლიერ სამყაროს ქმნის მუსიკა შენთვის?</p>
-                <input
-                  id="rzt-vibe"
-                  type="range"
-                  min={1}
-                  max={5}
-                  step={1}
-                  value={vibeLevel}
-                  onChange={(e) => setVibeLevel(Number(e.target.value))}
-                  disabled={!isAuthenticated}
-                  className="rzt-vibe-slider disabled:opacity-40 disabled:cursor-not-allowed"
-                  style={{ ['--fill' as string]: `${((vibeLevel - 1) / 4) * 100}%` }}
-                />
-                <div className="mt-2 flex justify-between text-[10px] text-gray-600">
-                  {VIBE_LEVELS.map((level, i) => (
-                    <span
-                      key={level}
-                      className={vibeLevel === i + 1 ? 'font-bold text-pink-400' : ''}
-                    >
-                      {i + 1}
-                    </span>
-                  ))}
-                </div>
-                <p className="mt-2 text-[11px] text-gray-500">
-                  კოეფიციენტი: <span className="font-mono text-pink-400">{VIBE_COEFFICIENTS[vibeLevel - 1].toFixed(4)}</span>
-                </p>
-              </div>
-
-              {/* Formula display */}
-              <div className="mt-5 rounded-lg border border-[#1e1e24] bg-[#0a0a0c] p-3">
-                <p className="text-[11px] text-gray-500">
-                  ფორმულა: ({params.join(' + ')}) × 1.4 × {VIBE_COEFFICIENTS[vibeLevel - 1].toFixed(4)} ={' '}
-                  <span className="font-bold text-blue-400">{totalScore}</span>
-                </p>
-              </div>
+              <SingleScoreInput id="release-score" score={totalScore} onChange={isAuthenticated ? setTotalScore : undefined} />
             </div>
           </div>
 
@@ -962,7 +876,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                         <span className="stage-review-score text-sm font-extrabold">{review.totalScore}<small>/90</small></span>
                       </div>
                       <p className="mt-1 break-words break-all overflow-hidden text-xs font-semibold text-gray-300 line-clamp-1">{review.title}</p>
-                      <p className="mt-1 text-[10px] text-gray-500">{review.scoringModel === 'experience_v1' ? 'პირადი განცდის შეფასება' : 'ადრინდელი ან ვერსიადაუზუსტებელი შეფასება'}</p>
+                      <p className="mt-1 text-[10px] text-gray-500">{review.scoringModel === 'holistic_v1' ? 'ერთიანი შეფასება' : review.scoringModel === 'experience_v1' ? 'პირადი განცდის შეფასება' : 'ადრინდელი ან ვერსიადაუზუსტებელი შეფასება'}</p>
                       {review.body && <p className="mt-1 break-words break-all overflow-hidden whitespace-pre-wrap text-xs leading-relaxed text-gray-500 line-clamp-2">{review.body}</p>}
                       <button type="button" onClick={() => onOpenReview(String(review.id))} className="mt-2 text-xs font-semibold text-blue-300 hover:text-blue-200">{review.body ? 'სრული რეცენზიის ნახვა →' : 'შეფასების ნახვა →'}</button>
                       {(user?.role === 'author' || user?.role === 'admin') && <button type="button" onClick={() => void toggleAuthorLike(String(review.id))} disabled={authorLikePendingId !== null} aria-pressed={authorLikedReviewIds.has(String(review.id))} className={`mt-2 rounded-full border px-2.5 py-1 text-[10px] font-semibold disabled:cursor-wait disabled:opacity-60 ${authorLikedReviewIds.has(String(review.id)) ? 'border-blue-300/40 bg-blue-300/10 text-blue-200' : 'border-[#2a2a32] text-gray-400 hover:text-blue-200'}`}>ავტორული მოწონება · {review.authorLikes}</button>}
@@ -983,3 +897,4 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     </div>
   );
 }
+

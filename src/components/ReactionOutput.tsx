@@ -12,43 +12,43 @@ export default function ReactionOutput() {
     const url = new URL(window.location.href);
     return (url.searchParams.get('token') || url.hash.slice(1)).trim();
   });
-  const pendingRating = useRef<{ params: number[]; vibe: number } | null>(null);
+  const pendingRating = useRef<number | null>(null);
   const saving = useRef(false);
   const lastInteraction = useRef(0);
   const saveTimer = useRef<number | null>(null);
 
   const persistRating = useCallback(async () => {
-    if (!supabase || saving.current || !pendingRating.current) return;
+    if (!supabase || saving.current || pendingRating.current === null) return;
     const rating = pendingRating.current;
     pendingRating.current = null;
     saving.current = true;
     const { data, error } = await supabase.rpc('reaction_session_rate', {
-      p_token: token, p_params: rating.params, p_vibe: rating.vibe,
+      p_token: token, p_score: rating,
     });
     saving.current = false;
     if (error || !data) setSaveStatus('შეფასება ვერ შეინახა. სცადეთ ხელახლა.');
-    else if (!pendingRating.current) setSaveStatus('');
-    if (pendingRating.current) {
+    else if (pendingRating.current === null) setSaveStatus('');
+    if (pendingRating.current !== null) {
       if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => { void persistRating(); }, 200);
     }
   }, [token]);
 
-  const changeRating = (params: number[], vibe: number) => {
-    pendingRating.current = { params, vibe };
+  const changeRating = (score: number) => {
+    pendingRating.current = score;
     lastInteraction.current = Date.now();
-    setView((current) => current ? { ...current, params, vibe, revealed: true } : current);
+    setView((current) => current ? { ...current, score, revealed: true } : current);
     setSaveStatus('ინახება...');
     if (saveTimer.current !== null) window.clearTimeout(saveTimer.current);
     saveTimer.current = window.setTimeout(() => { void persistRating(); }, 200);
   };
 
   const submitRating = async () => {
-    if (!supabase || !view || submittingRating || saving.current || pendingRating.current) return;
+    if (!supabase || !view || submittingRating || saving.current || pendingRating.current !== null) return;
     setSubmittingRating(true);
     setSaveStatus('');
     const { data, error } = await supabase.rpc('reaction_session_submit_rating', {
-      p_token: token, p_params: view.params, p_vibe: view.vibe,
+      p_token: token, p_score: view.score,
     });
     setSubmittingRating(false);
     setSaveStatus(error || !data ? 'შეფასება ვერ გაიგზავნა. სცადეთ ხელახლა.' : 'შეფასება გაგზავნილია. საერთო ქულა განახლდა.');
