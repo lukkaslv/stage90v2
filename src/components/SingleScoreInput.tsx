@@ -1,12 +1,12 @@
 import { valueTierFromScore } from '@/lib/valueTier';
 
-export const SCORE_PROMPTS = [
+const SCORE_PROMPTS = [
   'რა დაგამახსოვრდა ყველაზე მეტად?',
   'გინდა ამ ტრეკის ხელახლა მოსმენა?',
   'რამდენად მთლიანად და დამაჯერებლად ჟღერს?',
 ];
 
-export const SCORE_TIERS = [
+const SCORE_TIERS = [
   { label: 'ვერცხლი', range: '1–49' },
   { label: 'ოქრო', range: '50–64' },
   { label: 'ზურმუხტი', range: '65–74' },

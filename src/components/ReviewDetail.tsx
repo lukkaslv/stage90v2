@@ -31,7 +31,7 @@ export default function ReviewDetail({ id, onReleaseClick, onBack }: Props) {
         <span className="stage-review-score ml-auto text-xl font-bold">{Number(review.total_score ?? 0)}<small>/90</small></span>
       </div>
       <h1 className="mb-5 text-2xl font-bold text-white">{String(review.title ?? 'რეცენზია')}</h1>
-      <p className="mb-4 text-xs text-gray-500">{review.scoring_model === 'experience_v1' ? 'პირადი განცდის შეფასება' : 'ადრინდელი ან ვერსიადაუზუსტებელი შეფასება'}</p>
+      <p className="mb-4 text-xs text-gray-500">{review.scoring_model === 'holistic_v1' ? 'ერთიანი შეფასება' : review.scoring_model === 'experience_v1' ? 'პირადი განცდის შეფასება' : 'ადრინდელი ან ვერსიადაუზუსტებელი შეფასება'}</p>
       {Boolean(review.content) && <p className="whitespace-pre-wrap break-words leading-7 text-gray-300">{String(review.content)}</p>}
       {review.release_id != null && <button type="button" onClick={() => onReleaseClick(String(review.release_id))} className="mt-8 flex items-center gap-3 border-t border-white/10 pt-5 text-left text-blue-300">
         {Boolean(release?.cover_url) && <img src={String(release?.cover_url)} alt="" className="h-12 w-12 rounded-md object-cover" />}

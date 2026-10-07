@@ -399,11 +399,11 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
       user_id: authenticatedUser.id,
       title: formTab === 'review' ? reviewTitle.trim() : existingReview?.title ?? (formTab === 'value' ? 'ღირებულების შეფასება' : 'შეფასება'),
       content: formTab === 'review' ? reviewText.trim() : existingReview?.body ?? '',
-      rhymes: 5,
-      structure: 5,
-      style: 5,
-      individuality: 5,
-      vibe: 3,
+      rhymes: null,
+      structure: null,
+      style: null,
+      individuality: null,
+      vibe: null,
       scoring_model: 'holistic_v1',
       total_score: totalScore,
       media_url: formTab === 'review' ? (isMediaUser && mediaUrl.trim() ? mediaUrl.trim() : null) : existingReview?.mediaUrl ?? null,
@@ -419,16 +419,9 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
       const basePayload: Record<string, unknown> = { ...reviewPayload };
       delete basePayload.user_display_name;
       delete basePayload.author_name;
-      if (/scoring_model/i.test(error.message)) delete basePayload.scoring_model;
       ({ error } = existingReview
         ? await supabase.from('reviews').update(basePayload).eq('id', existingReview.id)
         : await supabase.from('reviews').insert(basePayload));
-      if (error && /scoring_model/i.test(error.message)) {
-        delete basePayload.scoring_model;
-        ({ error } = existingReview
-          ? await supabase.from('reviews').update(basePayload).eq('id', existingReview.id)
-          : await supabase.from('reviews').insert(basePayload));
-      }
     }
     if (error) {
       setIsSubmitting(false);
