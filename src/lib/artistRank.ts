@@ -1,14 +1,20 @@
+import type { RankedArtist } from '@/types/artist';
+
 export const ARTIST_RANK_TIERS = [
-  { key: 'legend', label: '#STAGE90 ლეგენდა', places: 'პირველი ადგილი', maxRank: 1 },
-  { key: 'superstar', label: 'სუპერვარსკვლავი', places: 'მე-2–მე-3 ადგილი', maxRank: 3 },
-  { key: 'star', label: 'ვარსკვლავი', places: 'მე-4–მე-7 ადგილი', maxRank: 7 },
-  { key: 'rising', label: 'ამომავალი ვარსკვლავი', places: 'მე-8–მე-11 ადგილი', maxRank: 11 },
-  { key: 'spark', label: 'ნაპერწკალი', places: 'მე-12 ადგილიდან', maxRank: Infinity },
+  { key: 'legend', label: '#STAGE90 ლეგენდა', places: 'პირველი ადგილი · 2 ტრეკი 70+', maxRank: 1, min60: 2, min70: 2 },
+  { key: 'superstar', label: 'სუპერვარსკვლავი', places: 'პირველი 3 ადგილი · 1 ტრეკი 70+ და კიდევ 1 ტრეკი 60+', maxRank: 3, min60: 2, min70: 1 },
+  { key: 'star', label: 'ვარსკვლავი', places: 'პირველი 7 ადგილი · 2 ტრეკი 60+', maxRank: 7, min60: 2, min70: 0 },
+  { key: 'rising', label: 'ამომავალი ვარსკვლავი', places: 'პირველი 11 ადგილი · 1 ტრეკი 60+', maxRank: 11, min60: 1, min70: 0 },
+  { key: 'spark', label: 'ნაპერწკალი', places: 'რეიტინგში მოხვედრა', maxRank: Infinity, min60: 0, min70: 0 },
 ] as const;
 
-export function artistTierFromRank(rank: number | null | undefined) {
+export function artistTierFromRank(artist: Pick<RankedArtist, 'rank' | 'rated_track_count' | 'tracks_60_plus' | 'tracks_70_plus'> | null | undefined) {
+  if (!artist) return null;
+  const rank = artist.rank;
   if (rank == null || !Number.isInteger(rank) || rank < 1) return null;
-  return ARTIST_RANK_TIERS.find((tier) => rank <= tier.maxRank) ?? null;
+  if (artist.rated_track_count < 3) return null;
+  return ARTIST_RANK_TIERS.find((tier) => rank <= tier.maxRank
+    && artist.tracks_60_plus >= tier.min60 && artist.tracks_70_plus >= tier.min70) ?? null;
 }
 
 export function safeArtistUrl(value: string | undefined): string | null {

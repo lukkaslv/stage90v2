@@ -35,12 +35,12 @@ export default function TopArtists({ preview = false, onArtistClick }: Props) {
     </div>}
     {loading && !data ? <SectionLoader /> : !error && entries.length === 0 ? <p className="stage-empty-state">რეიტინგი გამოჩნდება, როცა არტისტს მინიმუმ 3 შეფასებული ტრეკი ექნება.</p> : <ol className={preview ? 'stage-artist-preview' : 'stage-artist-leaderboard'}>
       {entries.map((artist) => {
-        const tier = artistTierFromRank(artist.rank);
+        const tier = artistTierFromRank(artist);
         return <li key={artist.id} className={`stage-artist-${tier?.key ?? 'spark'}`}>
           <button type="button" onClick={() => onArtistClick(artist.id)} className="stage-artist-card" aria-label={`${artist.rank}. ${artist.name} — საშუალო ${artistPoints(artist.average_score)} ქულა, პროფილის ნახვა`}>
             <span className="stage-artist-position">{String(artist.rank).padStart(2, '0')}</span>
             <ArtistPortrait src={artist.photo_url} />
-            <span className="stage-artist-card-copy"><strong className="stage-artist-name">{artist.name}</strong><ArtistRankBadge rank={artist.rank} /><span className="stage-artist-meta">{artist.rated_track_count} შეფასებული ტრეკი</span></span>
+            <span className="stage-artist-card-copy"><strong className="stage-artist-name">{artist.name}</strong><ArtistRankBadge artist={artist} /><span className="stage-artist-meta">{artist.rated_track_count} შეფასებული ტრეკი</span></span>
             <span className="stage-artist-total"><strong>{artistPoints(artist.average_score)}/90</strong><span>საშუალო ქულა</span></span>
             <ArrowUpRight aria-hidden="true" className="stage-artist-open" />
           </button>
@@ -56,8 +56,8 @@ export default function TopArtists({ preview = false, onArtistClick }: Props) {
     <details className="stage-artist-rules">
       <summary>როგორ ითვლება რეიტინგი და სტატუსი?</summary>
       <p className="mt-4 text-sm leading-7 text-gray-300">რეიტინგში მოსახვედრად არტისტს მინიმუმ 3 შეფასებული ტრეკი სჭირდება. ადგილს განსაზღვრავს ამ ტრეკების საშუალო ქულა. თითოეული აქტიური ტრეკი ერთხელ ითვლება; ალბომისა და კრებულის ქულა ცალკე არ ემატება. საერთო ტრეკის ქულა თითოეულ დაკავშირებულ არტისტს სრულად ეთვლება. შეუფასებელი ტრეკები საშუალო ქულაში არ შედის.</p>
-      <p className="mt-2 text-sm leading-7 text-gray-400">თანაბარი საშუალოსას უპირატესობა ენიჭება უფრო მეტ შეფასებულ ტრეკს, შემდეგ — უფრო ადრე შექმნილ პროფილს. სტატუსი მიმდინარე ადგილს მიჰყვება და შესაძლოა შეიცვალოს. 3 შეფასებულ ტრეკამდე არტისტს ადგილი და სტატუსი არ ენიჭება.</p>
-      <ul className="mt-4 flex flex-wrap gap-3">{ARTIST_RANK_TIERS.map((tier) => <li key={tier.key} className="flex flex-col gap-2"><ArtistRankBadge rank={tier.maxRank === Infinity ? 12 : tier.maxRank} /><span className="text-xs text-gray-400">{tier.places}</span></li>)}</ul>
+      <p className="mt-2 text-sm leading-7 text-gray-400">თანაბარი საშუალოსას უპირატესობა ენიჭება უფრო მეტ შეფასებულ ტრეკს, შემდეგ — უფრო ადრე შექმნილ პროფილს. სტატუსს ადგენს ადგილი და მაღალი ქულის მქონე ტრეკების რაოდენობა. თუ არტისტი თავისი ადგილის სტატუსის პირობებს ვერ აკმაყოფილებს, ენიჭება ყველაზე მაღალი სტატუსი, რომლის პირობებსაც აკმაყოფილებს. 3 შეფასებულ ტრეკამდე არტისტს ადგილი და სტატუსი არ ენიჭება.</p>
+      <ul className="mt-4 flex flex-wrap gap-3">{ARTIST_RANK_TIERS.map((tier) => <li key={tier.key} className="flex flex-col gap-2"><ArtistRankBadge tier={tier} /><span className="text-xs text-gray-400">{tier.places}</span></li>)}</ul>
     </details>
     <ArtistDirectory onArtistClick={onArtistClick} />
   </main>;
@@ -84,8 +84,8 @@ function ArtistDirectory({ onArtistClick }: Pick<Props, 'onArtistClick'>) {
     {error && <p role="alert" className="mb-4 text-sm text-rose-200">არტისტების სია ვერ განახლდა. <button onClick={reload} className="underline">ხელახლა ცდა</button></p>}
     {loading && !data ? <SectionLoader /> : <>
       {data?.artists.length === 0 && !error && <p className="stage-empty-state">{term ? 'არტისტი ვერ მოიძებნა.' : 'არტისტების პროფილები ჯერ არ დამატებულა.'}</p>}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">{data?.artists.map((artist) => <button key={artist.id} type="button" onClick={() => onArtistClick(artist.id)} className={`stage-artist-directory-card stage-artist-${artistTierFromRank(artist.rank)?.key ?? 'spark'}`}>
-        <ArtistPortrait src={artist.photo_url} /><span className="min-w-0"><strong className="mb-2 block truncate text-sm text-white">{artist.name}</strong><ArtistRankBadge rank={artist.rank} /></span>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">{data?.artists.map((artist) => <button key={artist.id} type="button" onClick={() => onArtistClick(artist.id)} className={`stage-artist-directory-card stage-artist-${artistTierFromRank(artist)?.key ?? 'spark'}`}>
+        <ArtistPortrait src={artist.photo_url} /><span className="min-w-0"><strong className="mb-2 block truncate text-sm text-white">{artist.name}</strong><ArtistRankBadge artist={artist} /></span>
       </button>)}</div>
     </>}
     <div className="mt-5 flex items-center justify-end gap-4 text-sm text-gray-300">

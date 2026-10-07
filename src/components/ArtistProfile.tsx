@@ -33,7 +33,7 @@ export default function ArtistProfile({ id, onBack, onReleaseClick }: Props) {
   }, [id]);
   const { data, loading, error, live, reload } = useArtistLiveQuery(query);
   const artist = data?.artist;
-  const tier = artistTierFromRank(artist?.rank);
+  const tier = artistTierFromRank(artist);
   const releases = data?.releases.filter((release) => filter === 'all' || (filter === 'tracks' ? release.is_scoring_track : !release.is_scoring_track)) ?? [];
 
   return <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -43,7 +43,7 @@ export default function ArtistProfile({ id, onBack, onReleaseClick }: Props) {
       <header className={`stage-artist-profile stage-artist-${tier?.key ?? 'spark'}`}>
         <ArtistPortrait src={artist.photo_url} />
         <div className="min-w-0 flex-1">
-          <div className="mb-4 flex flex-wrap items-center gap-3"><ArtistRankBadge rank={artist.rank} />{live && !error && <LiveRankingIndicator />}</div>
+          <div className="mb-4 flex flex-wrap items-center gap-3"><ArtistRankBadge artist={artist} />{live && !error && <LiveRankingIndicator />}</div>
           <h1 className="break-words text-3xl font-black text-white sm:text-5xl">{artist.name}</h1>
           {artist.bio && <p className="mt-4 max-w-2xl whitespace-pre-line break-words text-sm leading-7 text-gray-300">{artist.bio}</p>}
           <nav aria-label="არტისტის სოციალური ქსელები" className="mt-5 flex flex-wrap gap-2">{ARTIST_SOCIALS.map(({ key, label }) => {
@@ -58,7 +58,7 @@ export default function ArtistProfile({ id, onBack, onReleaseClick }: Props) {
         <div><dt>საშუალო შეფასება</dt><dd>{artist.rated_track_count ? `${artistPoints(artist.average_score)}/90` : '—'}</dd></div>
         <div><dt>შეფასებული ტრეკები</dt><dd>{artist.rated_track_count}<small> / {artist.track_count}</small></dd></div>
       </dl>
-      <p className="mb-7 max-w-3xl text-sm leading-6 text-gray-400">ადგილს განსაზღვრავს მინიმუმ 3 შეფასებული აქტიური ტრეკის საშუალო ქულა. თითოეული ტრეკი ერთხელ ითვლება; ალბომისა და კრებულის ქულა ცალკე არ ემატება. სტატუსი მიმდინარე ადგილთან ერთად იცვლება.</p>
+      <p className="mb-7 max-w-3xl text-sm leading-6 text-gray-400">ადგილს განსაზღვრავს მინიმუმ 3 შეფასებული აქტიური ტრეკის საშუალო ქულა. თითოეული ტრეკი ერთხელ ითვლება; ალბომისა და კრებულის ქულა ცალკე არ ემატება. სტატუსი დამოკიდებულია ადგილსა და 60+ და 70+ ქულის მქონე ტრეკების რაოდენობაზე.</p>
       <section aria-labelledby="artist-catalog-title">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-4"><h2 id="artist-catalog-title" className="text-xl font-bold text-white">რელიზები</h2><div className="stage-chart-tabs flex flex-wrap gap-2" role="group" aria-label="რელიზების ტიპი">
           {([{ key: 'all', label: 'ყველა' }, { key: 'tracks', label: 'ტრეკები' }, { key: 'albums', label: 'ალბომები და კრებულები' }] as const).map((item) => <button key={item.key} type="button" aria-pressed={filter === item.key} onClick={() => setFilter(item.key)} className={filter === item.key ? 'stage-chart-tab-active' : ''}>{item.label}</button>)}

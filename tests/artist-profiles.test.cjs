@@ -7,6 +7,7 @@ const { PGlite } = require('@electric-sql/pglite');
 const migration = readFileSync(path.join(__dirname, '../supabase/migrations/20261005000005_artist_profiles.sql'), 'utf8');
 const averageRankingMigration = readFileSync(path.join(__dirname, '../supabase/migrations/20261005000006_artist_average_ranking.sql'), 'utf8');
 const threeTrackRankingMigration = readFileSync(path.join(__dirname, '../supabase/migrations/20261007000002_artist_three_track_ranking.sql'), 'utf8');
+const qualityStatusMigration = readFileSync(path.join(__dirname, '../supabase/migrations/20261007000003_artist_quality_status.sql'), 'utf8');
 const adminId = '00000000-0000-4000-8000-000000000001';
 const readerId = '00000000-0000-4000-8000-000000000002';
 
@@ -47,6 +48,7 @@ async function database(idType, legacy = false) {
   await db.exec(migration);
   await db.exec(averageRankingMigration);
   await db.exec(threeTrackRankingMigration);
+  await db.exec(qualityStatusMigration);
   return db;
 }
 
@@ -78,6 +80,8 @@ for (const idType of ['uuid', 'bigint']) {
       assert.equal(Number(firstRow.total_score), 165);
       assert.equal(Number(firstRow.average_score), 82.5);
       assert.equal(firstRow.rated_track_count, 2);
+      assert.equal(firstRow.tracks_60_plus, 2);
+      assert.equal(firstRow.tracks_70_plus, 2);
       assert.equal(firstRow.track_count, 3);
       assert.equal(firstRow.release_count, 4);
       assert.equal(firstRow.rank, null);
@@ -93,6 +97,7 @@ for (const idType of ['uuid', 'bigint']) {
       await db.query('update public.releases set is_active = false where id::text = $1', [ids[0]]);
       // Explicit track links survive hiding the linked album, with no duplication.
       assert.equal((await db.query('select total_score from public.artist_rankings where id = $1', [first])).rows[0].total_score, 255);
+      assert.equal((await db.query('select tracks_70_plus from public.artist_rankings where id = $1', [first])).rows[0].tracks_70_plus, 3);
       await db.query('delete from public.releases where id::text = $1', [ids[1]]);
       assert.equal((await db.query('select count(*)::integer as n from public.artist_releases where release_id::text = $1', [ids[1]])).rows[0].n, 0);
       assert.equal((await db.query('select rank from public.artist_rankings where id = $1', [second])).rows[0].rank, null);

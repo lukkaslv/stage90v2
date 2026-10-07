@@ -1,5 +1,6 @@
 import { Sparkle, Sparkles, Star } from 'lucide-react';
-import { artistTierFromRank } from '@/lib/artistRank';
+import { ARTIST_RANK_TIERS, artistTierFromRank } from '@/lib/artistRank';
+import type { RankedArtist } from '@/types/artist';
 
 function RisingStarIcon({ className }: { className?: string }) {
   return <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m15 2 2.1 4.2 4.6.7-3.3 3.3.8 4.6-4.2-2.2-4.2 2.2.8-4.6-3.3-3.3 4.6-.7Z" /><path d="m3 16 4-4m-3 9 5-5m2 5 3-3" /></svg>;
@@ -11,8 +12,11 @@ function LaurelStarIcon({ className }: { className?: string }) {
 
 const icons = { spark: Sparkle, rising: RisingStarIcon, star: Star, superstar: Sparkles, legend: LaurelStarIcon };
 
-export default function ArtistRankBadge({ rank }: { rank: number | null }) {
-  const tier = artistTierFromRank(rank);
+type Props = { artist: Pick<RankedArtist, 'rank' | 'rated_track_count' | 'tracks_60_plus' | 'tracks_70_plus'>; tier?: never }
+  | { artist?: never; tier: typeof ARTIST_RANK_TIERS[number] };
+
+export default function ArtistRankBadge({ artist, tier: listedTier }: Props) {
+  const tier = listedTier ?? artistTierFromRank(artist);
   if (!tier) return <span className="text-xs text-gray-400">ჯერ რეიტინგის გარეშე</span>;
   const Icon = icons[tier.key];
   return <span className={`stage-artist-badge stage-artist-${tier.key}`} title={tier.places}>

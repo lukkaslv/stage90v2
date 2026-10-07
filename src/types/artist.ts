@@ -27,6 +27,8 @@ export interface RankedArtist extends Omit<Artist, 'is_active' | 'updated_at'> {
   rated_track_count: number;
   track_count: number;
   release_count: number;
+  tracks_60_plus: number;
+  tracks_70_plus: number;
 }
 
 export interface ArtistRelease {

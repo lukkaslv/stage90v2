@@ -90,7 +90,7 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
           : artistsError && visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center text-amber-300">არტისტების რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p>
               : <ol className="reaction-top-list reaction-artist-list grid min-h-0 flex-1">
                 {visibleArtists.map((artist) => {
-                  const tier = artistTierFromRank(artist.rank);
+                  const tier = artistTierFromRank(artist);
                   const points = artistPoints(artist.average_score);
                   return <li key={artist.id} data-artist-tier={tier?.key} aria-label={`${artist.rank}. ${artist.name}, ${tier?.label ?? ''}, საშუალო ${points} ქულა 90-დან, ${artist.rated_track_count} შეფასებული ტრეკი`} className="reaction-top-item flex min-w-0 items-center">
                     <span className="reaction-rank shrink-0 font-black tabular-nums">{String(artist.rank).padStart(2, '0')}</span>

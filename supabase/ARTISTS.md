@@ -3,6 +3,7 @@
 Migrations: `migrations/20261005000005_artist_profiles.sql`, then
 `migrations/20261005000006_artist_average_ranking.sql`, then
 `migrations/20261007000002_artist_three_track_ranking.sql`.
+Then apply `migrations/20261007000003_artist_quality_status.sql`.
 
 Apply these migrations in order before publishing the frontend. The first extends the existing `artists`
 directory, retaining IDs, slugs, image URLs and other legacy fields/relations. Existing
@@ -32,7 +33,11 @@ may belong to multiple artists. Removing an artist removes associations, not rel
 - Profiles with fewer than three scored tracks are listed in the directory with no rank/status.
 - Sort by the exact average descending, scored track count descending, profile creation
   time ascending, then ID ascending for deterministic ties. Show the first 15 in the chart.
-- Status follows rank: 1 legend, 2–3 superstar, 4–7 star, 8–11 rising, 12+ spark.
+- Status also requires scored-track milestones. Legend: rank 1 with two tracks at 70+.
+  Superstar: rank 1–3 with one track at 70+ and a second at 60+.
+  Star: rank 1–7 with two tracks at 60+. Rising: rank 1–11 with one track at 60+.
+  Otherwise a ranked artist is a spark. The highest satisfied status wins; rank itself
+  remains unchanged. Every status requires the existing three scored tracks.
 - The total remains available as a profile statistic; the average is shown on a
   90-point scale and rounded to one decimal only for display.
 

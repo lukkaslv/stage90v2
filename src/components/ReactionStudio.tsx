@@ -295,7 +295,7 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
 }
 
 function StudioArtistCard({ artist }: { artist: RankedArtist }) {
-  const tier = artistTierFromRank(artist.rank);
+  const tier = artistTierFromRank(artist);
   return <div className={`flex min-h-20 min-w-0 items-center gap-2 border border-[#343844] bg-[#191d27] p-2.5 stage-artist-${tier?.key ?? 'spark'}`}>
     <span className="text-base font-black" style={{ color: 'var(--artist-color)' }}>{String(artist.rank).padStart(2, '0')}</span>
     <ArtistPortrait src={artist.photo_url} className="h-12 w-12" />

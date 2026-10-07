@@ -63,11 +63,21 @@ test('release tier reads the overall score, not either role-group average', () =
   assert.equal(tiers.releaseValueTier({ community_score: 90 }), null);
 });
 
-test('artist status follows every agreed rank boundary, with no status for unranked artists', () => {
-  for (const [rank, key] of [[1, 'legend'], [2, 'superstar'], [3, 'superstar'], [4, 'star'], [7, 'star'], [8, 'rising'], [11, 'rising'], [12, 'spark'], [15, 'spark'], [100, 'spark']]) {
-    assert.equal(artistRanks.artistTierFromRank(rank).key, key);
-  }
-  for (const rank of [null, undefined, 0, -1, 1.5, Infinity]) {
-    assert.equal(artistRanks.artistTierFromRank(rank), null);
+test('artist status requires both rank and distinct high-scoring tracks', () => {
+  const status = (rank, scores) => artistRanks.artistTierFromRank({
+    rank, rated_track_count: scores.length,
+    tracks_60_plus: scores.filter((score) => score >= 60).length,
+    tracks_70_plus: scores.filter((score) => score >= 70).length,
+  })?.key ?? null;
+  for (const [rank, scores, key] of [
+    [1, [70, 70, 1], 'legend'], [1, [70, 60, 1], 'superstar'],
+    [1, [60, 60, 1], 'star'], [1, [60, 1, 1], 'rising'],
+    [1, [59, 59, 59], 'spark'], [3, [70, 70, 70], 'superstar'],
+    [7, [70, 70, 70], 'star'], [11, [70, 70, 70], 'rising'],
+    [12, [70, 70, 70], 'spark'], [100, [70, 70, 70], 'spark'],
+    [1, [90, 90], null], [null, [90, 90, 90], null],
+  ]) assert.equal(status(rank, scores), key);
+  for (const rank of [undefined, 0, -1, 1.5, Infinity]) {
+    assert.equal(status(rank, [70, 70, 70]), null);
   }
 });
