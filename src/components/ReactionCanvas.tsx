@@ -51,20 +51,39 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
   const featuredComment = view.comment?.visible && view.comment.author && view.comment.text
     ? { author: view.comment.author, text: view.comment.text }
     : null;
-  const visibleTop = top.slice(0, 15);
-  const visibleArtists = artistTop ?? [];
-  const showArtists = view.chart_type === 'artists';
-  const topColumns = visibleTop.length <= 5 ? Math.max(visibleTop.length, 1) : visibleTop.length === 6 ? 3 : visibleTop.length <= 10 ? 5 : 8;
-  const topRows = Math.ceil(visibleTop.length / topColumns);
+  const visibleTop = top.slice(0, 10);
+  const visibleArtists = artistTop?.slice(0, 5) ?? [];
 
   return <div className="reaction-canvas relative aspect-video w-full overflow-hidden text-white">
     <div className="reaction-canvas-content absolute inset-y-0 left-0 flex w-[72%] flex-col overflow-hidden">
-      <section className={`reaction-top flex shrink-0 flex-col ${showArtists ? 'h-[30%]' : 'h-[23%]'}`} aria-label={showArtists ? 'ყველა დროის ტოპ-15 არტისტი' : 'ყველა დროის ტოპ-15 ქულებით'}>
+      <section className="reaction-top reaction-track-chart flex h-[27%] shrink-0 flex-col" aria-label="ყველა დროის ტოპ-10 ტრეკი">
         <div className="reaction-top-heading flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-[.7cqw]"><span className="reaction-section-marker" /><h2 className="font-black">{showArtists ? 'ყველა დროის ტოპ-15 არტისტი' : 'ყველა დროის ტოპ-15 ქულებით'}</h2></div>
-          <span className="reaction-top-live flex shrink-0 items-center gap-[.55cqw]">{showArtists ? artistsLive && !artistsError && visibleArtists.length > 0 && <LiveRankingIndicator iconOnly /> : !loading && !error && top.length > 0 && <LiveRankingIndicator iconOnly />}<span className="reaction-supporting">{showArtists ? `${visibleArtists.length}/15 არტისტი · 5+ ტრეკი` : 'საერთო ქულით'}</span></span>
+          <div className="flex min-w-0 items-center gap-[.7cqw]"><span className="reaction-section-marker" /><h2 className="font-black">ყველა დროის ტოპ-10 ტრეკი</h2></div>
+          <span className="reaction-top-live flex shrink-0 items-center gap-[.55cqw]">{!loading && !error && top.length > 0 && <LiveRankingIndicator iconOnly />}<span className="reaction-supporting">{visibleTop.length}/10 · საერთო ქულით</span></span>
         </div>
-        {showArtists ? artistsLoading && visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგი იტვირთება...</p>
+        {loading && top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგი იტვირთება...</p>
+          : error && top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p>
+            : top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">შეფასებული აქტიური რელიზები ჯერ არ არის.</p>
+              : <ol className="reaction-top-list reaction-track-list grid min-h-0 flex-1">
+                {visibleTop.map((rankedRelease, index) => {
+                  const tier = releaseValueTier(rankedRelease);
+                  const rankMovement = movement[String(rankedRelease.id)];
+                  const leaderLabel = index === 0 ? 'ლიდერი' : null;
+                  return <li key={String(rankedRelease.id)} data-tier={tier ?? undefined} aria-label={`${index + 1}. ${rankedRelease.title}, ${tier ?? ''}, ${rankedRelease.overall_score} ქულა 90-დან${leaderLabel ? `, ${leaderLabel}` : ''}`} className={`reaction-top-item flex min-w-0 items-center ${String(rankedRelease.id) === String(currentTopReleaseId) ? 'reaction-top-item-current' : ''}`}>
+                    <span className="reaction-rank shrink-0 font-black tabular-nums">{String(index + 1).padStart(2, '0')}</span>
+                    {rankedRelease.coverUrl ? <img src={rankedRelease.coverUrl} alt="" className="reaction-top-cover aspect-square shrink-0 object-cover" /> : <Music2 className="reaction-top-cover shrink-0 text-gray-500" />}
+                    <span className="reaction-top-copy min-w-0"><strong className="text-white">{rankedRelease.title}</strong><span className="reaction-top-metrics"><span className="reaction-supporting">{rankedRelease.overall_score}/90</span>{leaderLabel ? <span className="reaction-top-leader-label">{leaderLabel}</span> : <RankMovementBadge rank={index + 1} movement={rankMovement} compact />}</span></span>
+                  </li>;
+                })}
+              </ol>}
+      </section>
+
+      <section className="reaction-top reaction-artist-chart flex h-[14%] shrink-0 flex-col" aria-label="ტოპ-5 არტისტი">
+        <div className="reaction-top-heading flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-[.7cqw]"><span className="reaction-section-marker" /><h2 className="font-black">ტოპ-5 არტისტი</h2></div>
+          <span className="reaction-top-live flex shrink-0 items-center gap-[.55cqw]">{artistsLive && !artistsError && visibleArtists.length > 0 && <LiveRankingIndicator iconOnly />}<span className="reaction-supporting">{visibleArtists.length}/5 · 5+ ტრეკი</span></span>
+        </div>
+        {artistsLoading && visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგი იტვირთება...</p>
           : artistsError && visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center text-amber-300">არტისტების რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p>
             : visibleArtists.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგში ჯერ არ არის არტისტი 5 შეფასებული ტრეკით.</p>
               : <ol className="reaction-top-list reaction-artist-list grid min-h-0 flex-1">
@@ -73,22 +92,7 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
                   return <li key={artist.id} data-artist-tier={tier?.key} aria-label={`${artist.rank}. ${artist.name}, ${tier?.label ?? ''}, საშუალო ${artistPoints(artist.average_score)} ქულა 90-დან, ${artist.rated_track_count} შეფასებული ტრეკი`} className="reaction-top-item flex min-w-0 items-center">
                     <span className="reaction-rank shrink-0 font-black tabular-nums">{String(artist.rank).padStart(2, '0')}</span>
                     <ArtistPortrait src={artist.photo_url} className="reaction-top-cover" />
-                    <span className="reaction-top-copy min-w-0"><strong className="text-white">{artist.name}</strong><span className="reaction-supporting block truncate">{artistPoints(artist.average_score)}/90 · {artist.rated_track_count} ტრეკი</span><span className="stage-rank-status stage-rank-status-compact reaction-artist-tier">{tier?.label}</span></span>
-                  </li>;
-                })}
-              </ol>
-          : loading && top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">რეიტინგი იტვირთება...</p>
-          : error && top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center text-amber-300">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p>
-            : top.length === 0 ? <p className="reaction-top-state flex flex-1 items-center">შეფასებული აქტიური რელიზები ჯერ არ არის.</p>
-              : <ol className="reaction-top-list grid min-h-0 flex-1" data-density={visibleTop.length <= 2 ? 'hero' : topRows === 1 ? 'spacious' : topColumns > 5 ? 'dense' : 'compact'} style={{ gridTemplateColumns: `repeat(${topColumns}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${topRows}, minmax(0, 1fr))` }}>
-                {visibleTop.map((rankedRelease, index) => {
-                  const tier = releaseValueTier(rankedRelease);
-                  const rankMovement = movement[String(rankedRelease.id)];
-                  const leaderLabel = index === 0 ? 'ლიდერი' : null;
-                  return <li key={String(rankedRelease.id)} data-tier={tier ?? undefined} aria-label={`${index + 1}. ${rankedRelease.title}, ${tier ?? ''}, ${rankedRelease.overall_score} ქულა 90-დან${leaderLabel ? `, ${leaderLabel}` : ''}`} className={`reaction-top-item flex min-w-0 items-center ${String(rankedRelease.id) === String(currentTopReleaseId) ? 'reaction-top-item-current' : ''}`}>
-                    <span className="reaction-rank shrink-0 font-black tabular-nums">{String(index + 1).padStart(2, '0')}</span>
-                    {rankedRelease.coverUrl ? <img src={rankedRelease.coverUrl} alt="" className="reaction-top-cover aspect-square shrink-0 object-cover" /> : <Music2 className="reaction-top-cover shrink-0 text-gray-500" />}
-                    <span className="reaction-top-copy min-w-0"><strong className="text-white">{rankedRelease.title}</strong><span className="reaction-top-metrics"><span className="reaction-supporting">{rankedRelease.overall_score}/90</span>{leaderLabel ? <span className="reaction-top-leader-label">{leaderLabel}</span> : <RankMovementBadge rank={index + 1} movement={rankMovement} compact micro={topColumns > 5} />}</span></span>
+                    <span className="reaction-top-copy min-w-0"><strong className="text-white">{artist.name}</strong><span className="reaction-supporting block">{artistPoints(artist.average_score)}/90 · {artist.rated_track_count} ტრეკი</span><span className="stage-rank-status stage-rank-status-compact reaction-artist-tier">{tier?.label}</span></span>
                   </li>;
                 })}
               </ol>}

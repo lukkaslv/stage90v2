@@ -197,6 +197,19 @@ body {
 .reaction-top-live .stage-live-indicator { font-size: .8cqw; }
 .reaction-top-live .stage-live-bars { height: .75cqw; gap: .12cqw; }
 .reaction-top-live .stage-live-bars i { width: .12cqw; }
+.reaction-track-list { grid-template-columns: repeat(5,minmax(0,1fr)); grid-template-rows: repeat(2,minmax(0,1fr)); }
+.reaction-track-list .reaction-top-item { grid-template-columns: 3.4cqw minmax(0,1fr); gap: .5cqw; padding: .4cqw .5cqw; font-size: .78cqw; }
+.reaction-track-list .reaction-top-cover { width: 3.4cqw; height: 3.4cqw; }
+.reaction-track-list .reaction-top-item strong { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+.reaction-track-list .reaction-top-item .reaction-supporting { font-size: .68cqw; }
+.reaction-artist-chart { padding-top: .55cqw; padding-bottom: .55cqw; }
+.reaction-artist-chart .reaction-top-heading { min-height: 1.8cqw; margin-bottom: .35cqw; }
+.reaction-artist-list { grid-template-rows: minmax(0,1fr); }
+.reaction-artist-list .reaction-top-item { grid-template-columns: 2.8cqw minmax(0,1fr); gap: .4cqw; padding: .3cqw .45cqw; font-size: .7cqw; }
+.reaction-artist-list .reaction-top-cover { width: 2.8cqw; height: 2.8cqw; }
+.reaction-artist-list .reaction-top-item strong { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
+.reaction-artist-list .reaction-top-item .reaction-supporting { font-size: .62cqw; }
+.reaction-artist-list .reaction-artist-tier { font-size: .6cqw; }
 .reaction-video { border-right: 1px solid var(--border); background: var(--bg); padding: 1cqw 1.2cqw .8cqw; }
 .reaction-video-heading { min-height: 3cqw; margin-bottom: .5cqw; }
 .reaction-artist { color: #ff80c2; font-size: 1.05cqw; }

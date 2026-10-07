@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1600" viewBox="0 0 1080 1600" role="img" aria-labelledby="title description">
+  <title id="title">როგორ ვაფასებთ მუსიკას Stage 90-ზე?</title>
+  <desc id="description">მოუსმინე ტრეკს, დაფიქრდი შთაბეჭდილებაზე და ერთი ზოლით აირჩიე ქულა 1-დან 90-მდე. რელიზის საფეხური მისი საერთო საშუალო ქულით განისაზღვრება.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10182b"/>
+      <stop offset="0.55" stop-color="#0b101c"/>
+      <stop offset="1" stop-color="#17101e"/>
+    </linearGradient>
+    <linearGradient id="slider" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#778dff"/>
+      <stop offset="0.62" stop-color="#aa80ef"/>
+      <stop offset="1" stop-color="#f27ba9"/>
+    </linearGradient>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="16"/>
+    </filter>
+    <style>
+      text { font-family: 'Noto Sans Georgian', 'DejaVu Sans', 'Sylfaen', sans-serif; }
+      .muted { fill: #aab3c8; }
+      .white { fill: #f8f9ff; }
+      .small { font-size: 25px; }
+      .body { font-size: 29px; }
+      .step { font-size: 35px; font-weight: 700; }
+      .card { fill: #1b2335; stroke: #34405b; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect width="1080" height="1600" fill="url(#background)"/>
+  <circle cx="1000" cy="85" r="200" fill="#614fb4" opacity=".17" filter="url(#glow)"/>
+  <circle cx="65" cy="1400" r="215" fill="#b55088" opacity=".1" filter="url(#glow)"/>
+
+  <text x="70" y="83" fill="#9dabff" font-size="27" font-weight="800" letter-spacing="5">STAGE 90</text>
+  <text x="70" y="158" class="white" font-size="53" font-weight="800">როგორ ვაფასებთ მუსიკას</text>
+  <text x="70" y="221" class="white" font-size="53" font-weight="800">Stage 90-ზე?</text>
+
+  <rect class="card" x="55" y="274" width="970" height="142" rx="26"/>
+  <circle cx="119" cy="345" r="35" fill="#7484f3"/>
+  <text x="119" y="357" text-anchor="middle" class="white" font-size="32" font-weight="800">1</text>
+  <text x="177" y="354" class="white step">მოუსმინე ტრეკს</text>
+  <path d="M910 321v49a28 28 0 1 1 -15 -25v-42l45 -11v17z" fill="#8393ed"/>
+
+  <path d="M119 416v26" stroke="#6e7b9b" stroke-width="4" stroke-dasharray="6 8"/>
+  <rect class="card" x="55" y="443" width="970" height="344" rx="26"/>
+  <circle cx="119" cy="510" r="35" fill="#8b79db"/>
+  <text x="119" y="522" text-anchor="middle" class="white" font-size="32" font-weight="800">2</text>
+  <text x="177" y="518" class="white step">დაფიქრდი შენს შთაბეჭდილებაზე</text>
+  <text x="91" y="588" class="muted body">რა დაგამახსოვრდა ყველაზე მეტად?</text>
+  <line x1="91" y1="609" x2="989" y2="609" stroke="#34405b"/>
+  <text x="91" y="658" class="muted body">გინდა ამ ტრეკის ხელახლა მოსმენა?</text>
+  <line x1="91" y1="679" x2="989" y2="679" stroke="#34405b"/>
+  <text x="91" y="728" class="muted body">რამდენად მთლიანად და დამაჯერებლად ჟღერს?</text>
+
+  <path d="M119 787v26" stroke="#6e7b9b" stroke-width="4" stroke-dasharray="6 8"/>
+  <rect class="card" x="55" y="814" width="970" height="369" rx="26"/>
+  <circle cx="119" cy="883" r="35" fill="#aa70c3"/>
+  <text x="119" y="895" text-anchor="middle" class="white" font-size="32" font-weight="800">3</text>
+  <text x="177" y="891" class="white step">აირჩიე ქულა ერთი ზოლით</text>
+  <text x="91" y="957" class="muted body">შენი პირადი შეფასება</text>
+  <text x="989" y="956" text-anchor="end" fill="#a9b7ff" font-size="42" font-weight="800">72/90</text>
+  <rect x="91" y="1011" width="898" height="17" rx="8.5" fill="#41475c"/>
+  <rect x="91" y="1011" width="718" height="17" rx="8.5" fill="url(#slider)"/>
+  <circle cx="809" cy="1019.5" r="27" fill="#c693ec" opacity=".4" filter="url(#glow)"/>
+  <circle cx="809" cy="1019.5" r="24" fill="#f8f9ff" stroke="#aa80ef" stroke-width="7"/>
+  <text x="91" y="1084" class="muted small">1</text>
+  <text x="989" y="1084" text-anchor="end" class="muted small">90</text>
+  <text x="91" y="1145" fill="#c9d0e2" font-size="26">ერთი ქულა — შენი მოსმენის საერთო შთაბეჭდილება</text>
+
+  <text x="55" y="1246" class="white" font-size="35" font-weight="700">ქულების საფეხურები</text>
+  <g font-size="24" text-anchor="middle">
+    <rect x="55" y="1280" width="184" height="112" rx="18" fill="#2b313d" stroke="#abb2c0" stroke-width="2"/>
+    <text x="147" y="1327" fill="#d8dee9" font-weight="700">ვერცხლი</text><text x="147" y="1366" fill="#abb2c0">1–49</text>
+    <rect x="251" y="1280" width="184" height="112" rx="18" fill="#383127" stroke="#c8a45d" stroke-width="2"/>
+    <text x="343" y="1327" fill="#eed296" font-weight="700">ოქრო</text><text x="343" y="1366" fill="#c8a45d">50–64</text>
+    <rect x="447" y="1280" width="184" height="112" rx="18" fill="#243a35" stroke="#69bc9c" stroke-width="2"/>
+    <text x="539" y="1327" fill="#a3e1c5" font-weight="700">ზურმუხტი</text><text x="539" y="1366" fill="#69bc9c">65–74</text>
+    <rect x="643" y="1280" width="184" height="112" rx="18" fill="#293747" stroke="#91abc7" stroke-width="2"/>
+    <text x="735" y="1327" fill="#bad4ed" font-weight="700">საფირონი</text><text x="735" y="1366" fill="#91abc7">75–84</text>
+    <rect x="839" y="1280" width="184" height="112" rx="18" fill="#402b39" stroke="#de8090" stroke-width="2"/>
+    <text x="931" y="1327" fill="#ffb4c0" font-weight="700">ლალი</text><text x="931" y="1366" fill="#de8090">85–90</text>
+  </g>
+
+  <rect x="55" y="1431" width="970" height="119" rx="22" fill="#22283a" stroke="#485171" stroke-width="2"/>
+  <text x="85" y="1479" class="white" font-size="27" font-weight="700">რელიზის საერთო ქულა</text>
+  <text x="85" y="1520" fill="#bdc7dc" font-size="24">ყველა გამოქვეყნებული შეფასების საშუალოა.</text>
+</svg>
