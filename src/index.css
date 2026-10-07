@@ -60,6 +60,10 @@
 @media (prefers-reduced-motion: reduce) { .site-maintenance *, .site-maintenance *::before, .site-maintenance *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; } }
 
 :root {
+  --tier-silver-rgb: 203, 205, 211;
+  --tier-sapphire-rgb: 90, 145, 255;
+  --tier-silver: rgb(var(--tier-silver-rgb));
+  --tier-sapphire: rgb(var(--tier-sapphire-rgb));
   --bg: #0c0d11;
   --bg-card: #17191e;
   --bg-card-hover: #20232a;
@@ -148,10 +152,10 @@ body {
 .reaction-top-state { font-size: 1cqw; }
 .reaction-top-list { gap: .48cqw; padding: .16cqw .32cqw .32cqw; }
 .reaction-top-item { --tier-rgb: 189, 196, 205; position: relative; isolation: isolate; display: grid; min-height: 0; grid-template-columns: 2.6cqw minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); align-items: center; gap: .25cqw .4cqw; overflow: hidden; contain: paint; border: 1px solid rgba(var(--tier-rgb), .8); border-radius: .2cqw; background: linear-gradient(95deg, rgba(var(--tier-rgb), .19), #14161b 70%); box-shadow: 0 0 .65cqw rgba(var(--tier-rgb), .42), 0 0 1.1cqw rgba(var(--tier-rgb), .17), inset 0 0 0 1px rgba(var(--tier-rgb), .2); padding: .35cqw .4cqw .35cqw .5cqw; font-size: .74cqw; line-height: 1.25; }
-.reaction-top-item[data-tier="ვერცხლი"] { --tier-rgb: 189, 196, 205; }
+.reaction-top-item[data-tier="ვერცხლი"] { --tier-rgb: var(--tier-silver-rgb); }
 .reaction-top-item[data-tier="ოქრო"] { --tier-rgb: 216, 187, 120; }
 .reaction-top-item[data-tier="ზურმუხტი"] { --tier-rgb: 131, 190, 161; }
-.reaction-top-item[data-tier="საფირონი"] { --tier-rgb: 145, 171, 199; }
+.reaction-top-item[data-tier="საფირონი"] { --tier-rgb: var(--tier-sapphire-rgb); }
 .reaction-top-item[data-tier="ლალი"] { --tier-rgb: 222, 128, 144; }
 .reaction-top-item[data-artist-tier="legend"] { --tier-rgb: 232, 199, 120; }
 .reaction-top-item[data-artist-tier="superstar"] { --tier-rgb: 194, 171, 232; }
@@ -229,10 +233,10 @@ body {
 .reaction-video-empty svg { width: 2.7cqw; height: 2.7cqw; }
 .reaction-track { margin-top: 1.1cqw; color: #c8cbd3; font-size: .9cqw; }
 .reaction-score { --rating-rgb: 113,134,183; overflow: hidden; border-top: .16cqw solid rgb(var(--rating-rgb)); background: radial-gradient(circle at 50% 25%, rgba(var(--rating-rgb),.08), transparent 60%), var(--bg-card); padding: 1cqw 1.05cqw .75cqw; transition: border-color .3s ease, background .3s ease; }
-.reaction-score[data-tier="ვერცხლი"] { --rating-rgb: 188,199,215; }
+.reaction-score[data-tier="ვერცხლი"] { --rating-rgb: var(--tier-silver-rgb); }
 .reaction-score[data-tier="ოქრო"] { --rating-rgb: 226,184,103; }
 .reaction-score[data-tier="ზურმუხტი"] { --rating-rgb: 103,224,178; }
-.reaction-score[data-tier="საფირონი"] { --rating-rgb: 145,180,230; }
+.reaction-score[data-tier="საფირონი"] { --rating-rgb: var(--tier-sapphire-rgb); }
 .reaction-score[data-tier="ლალი"] { --rating-rgb: 238,126,151; }
 .reaction-rating-heading { min-height: 1.45cqw; }
 .reaction-rating-heading h2 { font-size: .85cqw; line-height: 1.2; }
@@ -622,10 +626,10 @@ input[type="range"].rzt-vibe-slider::-moz-range-thumb {
 .stage-format-badge::before { content: ''; display: block; width: 3px; height: 10px; margin-right: 6px; background: #9da1aa; }
 .stage-tier { --tier: #bac2cb; display: inline-flex; align-items: center; width: fit-content; min-height: 25px; padding: 3px 7px 3px 8px; border: 1px solid color-mix(in srgb, var(--tier) 55%, #202227); border-left: 4px solid var(--tier); border-radius: 0; background: color-mix(in srgb, var(--tier) 12%, #14161b); color: var(--tier); font-size: 11px; font-weight: 800; line-height: 1.3; }
 .stage-tier-ruby { --tier: #de8090; }
-.stage-tier-sapphire { --tier: #91abc7; }
+.stage-tier-sapphire { --tier: var(--tier-sapphire); }
 .stage-tier-emerald { --tier: #83bea1; }
 .stage-tier-gold { --tier: #d8bb78; }
-.stage-tier-silver { --tier: #bdc4cd; }
+.stage-tier-silver { --tier: var(--tier-silver); }
 .stage-tier-unrated { --tier: #9398a3; }
 .stage-score-triplet { gap: 0; border: 1px solid #454852; background: #111318; }
 .stage-score-item { position: relative; display: flex; flex-direction: column; justify-content: space-between; min-height: 62px; padding: 9px 8px 7px; text-align: left; }

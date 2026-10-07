@@ -4,10 +4,10 @@ export type StrictValueTier = 'ლალი' | 'საფირონი' | 'ზ
 
 export const STRICT_VALUE_TIER_CONFIG: Record<StrictValueTier, { badge: string; icon: string }> = {
   'ლალი': { badge: 'stage-tier stage-tier-ruby', icon: 'text-[#de8090]' },
-  'საფირონი': { badge: 'stage-tier stage-tier-sapphire', icon: 'text-[#91abc7]' },
+  'საფირონი': { badge: 'stage-tier stage-tier-sapphire', icon: 'text-[color:var(--tier-sapphire)]' },
   'ზურმუხტი': { badge: 'stage-tier stage-tier-emerald', icon: 'text-[#83bea1]' },
   'ოქრო': { badge: 'stage-tier stage-tier-gold', icon: 'text-[#d8bb78]' },
-  'ვერცხლი': { badge: 'stage-tier stage-tier-silver', icon: 'text-[#bdc4cd]' },
+  'ვერცხლი': { badge: 'stage-tier stage-tier-silver', icon: 'text-[color:var(--tier-silver)]' },
 };
 
 export function valueTierFromScore(score: number): StrictValueTier {

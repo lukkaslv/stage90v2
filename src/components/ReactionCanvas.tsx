@@ -64,7 +64,7 @@ export default function ReactionCanvas({ view, scene: fixedScene, preview = fals
   const chartError = scene === 'artists' ? artistsError : error;
 
   return <div className="broadcast" data-scene={scene}>
-    <header className="broadcast-header"><span className="broadcast-brand"><img src="/stage90-mark.svg" alt="" />სცენა 90</span><span>{reactionScenes.find((entry) => entry.id === scene)?.label}</span><span className="broadcast-header-note">მუსიკა · მოსმენა · შეფასება</span></header>
+    <header className="broadcast-header"><span className="broadcast-brand"><img src="/stage90-mark.svg" alt="" />#STAGE90</span><span>{reactionScenes.find((entry) => entry.id === scene)?.label}</span><span className="broadcast-header-note">მუსიკა · მოსმენა · შეფასება</span></header>
     <div className="broadcast-camera" aria-label="კამერის ადგილი">{preview && <span>კამერის ადგილი</span>}</div>
     {isChart ? <>
       <section className="broadcast-chart">
