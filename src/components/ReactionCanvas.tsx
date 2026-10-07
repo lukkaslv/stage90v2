@@ -6,7 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { artistPoints, artistTierFromRank } from '@/lib/artistRank';
 import { youtubeEmbedUrl } from '@/lib/youtubeEmbed';
 import { releaseValueTier } from '@/lib/valueTier';
-import { leaderStatus } from '@/lib/leaderStatus';
 import { reactionCommentInitial, type ReactionView } from '@/lib/reactionStudio';
 import ReactionRatingPanel from '@/components/ReactionRatingPanel';
 import RankMovementBadge from '@/components/RankMovementBadge';
@@ -85,7 +84,7 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
                 {visibleTop.map((rankedRelease, index) => {
                   const tier = releaseValueTier(rankedRelease);
                   const rankMovement = movement[String(rankedRelease.id)];
-                  const leaderLabel = index === 0 ? leaderStatus(rankMovement) : null;
+                  const leaderLabel = index === 0 ? 'ლიდერი' : null;
                   return <li key={String(rankedRelease.id)} data-tier={tier ?? undefined} aria-label={`${index + 1}. ${rankedRelease.title}, ${tier ?? ''}, ${rankedRelease.overall_score} ქულა 90-დან${leaderLabel ? `, ${leaderLabel}` : ''}`} className={`reaction-top-item flex min-w-0 items-center ${String(rankedRelease.id) === String(currentTopReleaseId) ? 'reaction-top-item-current' : ''}`}>
                     <span className="reaction-rank shrink-0 font-black tabular-nums">{String(index + 1).padStart(2, '0')}</span>
                     {rankedRelease.coverUrl ? <img src={rankedRelease.coverUrl} alt="" className="reaction-top-cover aspect-square shrink-0 object-cover" /> : <Music2 className="reaction-top-cover shrink-0 text-gray-500" />}
