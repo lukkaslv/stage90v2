@@ -1,0 +1,1 @@
+export const MIN_TRACKS_FOR_ARTIST_RATING = 3;

@@ -4,6 +4,8 @@ import { supabase } from '@/lib/supabase';
 import SingleScoreInput from '@/components/SingleScoreInput';
 import { useAllTimeTop15 } from '@/hooks/useAllTimeTop15';
 import { useTopArtistRankings } from '@/hooks/useTopArtistRankings';
+import { saveArtistQueue, saveArtistQueueVisibility, useArtistQueueVisibility } from '@/hooks/useArtistQueueVisibility';
+import { getQueue, type ArtistQueueEntry } from '@/lib/artistQueue';
 import { artistPoints, artistTierFromRank } from '@/lib/artistRank';
 import { reactionCommentInitial, reactionOutputUrl, reactionStorageKey, type ReactionScene, type ReactionSession, type ReactionView } from '@/lib/reactionStudio';
 import { youtubeEmbedUrl } from '@/lib/youtubeEmbed';
@@ -26,6 +28,10 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
   const [commentText, setCommentText] = useState('');
   const [commentBusy, setCommentBusy] = useState(false);
   const [commentMessage, setCommentMessage] = useState('');
+  const [queueBusy, setQueueBusy] = useState(false);
+  const [queueMessage, setQueueMessage] = useState('');
+  const [queueArtist, setQueueArtist] = useState('');
+  const { visible: queueVisible, setVisible: setQueueVisible, queue, setQueue } = useArtistQueueVisibility();
   const { top, movement, loading: topLoading, error: topError } = useAllTimeTop15();
   const { data: artistTop, loading: artistsLoading, error: artistsError } = useTopArtistRankings();
   const visibleTracks = top.slice(0, 10);
@@ -175,6 +181,38 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
     setCommentBusy(false);
   };
 
+  const toggleQueue = async () => {
+    if (queueBusy) return;
+    setQueueBusy(true);
+    setQueueMessage('');
+    const next = !queueVisible;
+    if (await saveArtistQueueVisibility(next)) setQueueVisible(next);
+    else setQueueMessage('არტისტების რიგის განახლება ვერ მოხერხდა.');
+    setQueueBusy(false);
+  };
+
+  const updateQueue = async (entries: ArtistQueueEntry[], clearInput = false) => {
+    if (queueBusy) return;
+    setQueueBusy(true);
+    setQueueMessage('');
+    const next = getQueue(JSON.stringify(entries));
+    if (await saveArtistQueue(next)) {
+      setQueue(next);
+      if (clearInput) setQueueArtist('');
+    } else setQueueMessage('მოთხოვნების შენახვა ვერ მოხერხდა.');
+    setQueueBusy(false);
+  };
+
+  const addQueueRequest = () => {
+    const artist = queueArtist.trim();
+    if (!artist) return;
+    const match = queue.find((entry) => entry.artist.toLocaleLowerCase('ka-GE') === artist.toLocaleLowerCase('ka-GE'));
+    const next = match
+      ? queue.map((entry) => entry === match ? { ...entry, requests: entry.requests + 1 } : entry)
+      : [...queue, { artist, requests: 1 }];
+    void updateQueue(next, true);
+  };
+
   const scenes: { id: ReactionScene; label: string }[] = [
     { id: 'intro', label: 'რელიზის ბარათი' },
     { id: 'tracks', label: 'ტრეკების სია' },
@@ -218,6 +256,13 @@ export default function ReactionStudio({ releases }: { releases: Row[] }) {
       <div className="min-w-0 space-y-5">
         <div className="border border-[#343844] bg-[#12151d] p-4">
           <h3 className="mb-3 font-bold text-white">ეთერის მართვა</h3>
+          <div className="mb-4 flex items-center justify-between gap-3 border border-violet-400/30 bg-violet-400/10 p-3"><div><p className="text-sm font-bold text-white">არტისტების რიგი OBS-ზე</p><p className="text-xs text-gray-400">{queueVisible ? 'რიგი ეთერში ჩანს' : 'რიგი ეთერიდან დამალულია'}</p></div><button type="button" onClick={() => void toggleQueue()} disabled={queueBusy} aria-pressed={queueVisible} className="shrink-0 border border-violet-400 px-3 py-2 text-xs font-bold text-violet-200 disabled:opacity-50">{queueVisible ? 'რიგის დამალვა' : 'რიგის ჩვენება'}</button></div>
+          <form className="mb-4 border border-violet-400/20 bg-[#1a1522] p-3" onSubmit={(event) => { event.preventDefault(); addQueueRequest(); }}>
+            <label className="block text-xs font-semibold text-gray-300">არტისტის მოთხოვნა<input value={queueArtist} onChange={(event) => setQueueArtist(event.target.value)} maxLength={80} placeholder="შეიყვანეთ არტისტის სახელი" className="mt-1.5 w-full border border-gray-600 bg-[#0b0d16] px-3 py-2.5 text-sm text-white" /></label>
+            <button type="submit" disabled={queueBusy || !queueArtist.trim()} className="mt-2 border border-violet-400 px-3 py-2 text-xs font-bold text-violet-200 disabled:opacity-50">მოთხოვნის დამატება</button>
+            {queue.length === 0 ? <p className="mt-3 text-xs text-gray-400">რიგი ცარიელია.</p> : <ol className="mt-3 space-y-2">{queue.map((entry) => <li key={entry.artist} className="flex flex-wrap items-center gap-2 border border-white/10 px-2 py-1.5 text-sm text-gray-200"><strong className="min-w-0 flex-1 break-words">{entry.artist}</strong><span className="font-bold text-violet-200">×{entry.requests}</span><button type="button" onClick={() => void updateQueue(queue.map((item) => item === entry ? { ...item, requests: item.requests + 1 } : item))} disabled={queueBusy} aria-label={`${entry.artist}: მოთხოვნის დამატება`} className="border border-violet-400/50 px-2 py-1 text-xs text-violet-200 disabled:opacity-50">+1</button><button type="button" onClick={() => void updateQueue(queue.map((item) => item === entry ? { ...item, requests: item.requests - 1 } : item))} disabled={queueBusy} aria-label={`${entry.artist}: მოთხოვნის გამოკლება`} className="border border-gray-500 px-2 py-1 text-xs text-gray-200 disabled:opacity-50">−1</button><button type="button" onClick={() => void updateQueue(queue.filter((item) => item !== entry))} disabled={queueBusy} aria-label={`${entry.artist}: რიგიდან წაშლა`} className="border border-rose-500/50 px-2 py-1 text-xs text-rose-300 disabled:opacity-50">წაშლა</button></li>)}</ol>}
+          </form>
+          {queueMessage && <p role="status" className="mb-3 text-xs text-amber-300">{queueMessage}</p>}
           <label className="mb-3 block text-xs font-semibold text-gray-400">რელიზი<select aria-label="რელიზის არჩევა" className="mt-1.5 w-full border border-gray-600 bg-[#0b0d16] px-3 py-2.5 text-sm text-white" value={selectedReleaseId} onChange={(event) => void changeRelease(event.target.value)} disabled={busy}><option value="">აირჩიეთ რელიზი</option>{activeReleases.map((row) => <option key={String(row.id)} value={String(row.id)}>{String(row.artist_name ?? '')} — {String(row.title ?? '')}</option>)}</select></label>
           {!session ? <button type="button" onClick={() => void createSession()} disabled={!selectedReleaseId || busy} className="w-full bg-blue-500 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">სესიის შექმნა</button> : view && <>
             <div className="grid grid-cols-3 gap-2" role="group" aria-label="ეკრანის არჩევა">{scenes.map((scene) => <button key={scene.id} type="button" onClick={() => void updateView({ scene: scene.id })} disabled={busy} aria-pressed={view.scene === scene.id} className={`min-h-11 border px-2 py-2 text-xs font-semibold disabled:opacity-50 ${view.scene === scene.id ? 'border-pink-400 bg-pink-400/15 text-white' : 'border-gray-600 text-gray-300'}`}>{scene.label}</button>)}</div>

@@ -20,5 +20,5 @@ export function safeArtistUrl(value: string | undefined): string | null {
 }
 
 export function artistPoints(value: number) {
-  return new Intl.NumberFormat('ka-GE', { maximumFractionDigits: 1 }).format(value);
+  return new Intl.NumberFormat('ka-GE', { maximumFractionDigits: 0 }).format(value);
 }

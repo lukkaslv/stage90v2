@@ -261,6 +261,39 @@ body {
 .reaction-rating-submit:disabled { opacity: .55; }
 .reaction-rating-status { margin-top: .25cqw; color: #fcd34d; font-size: .56cqw; }
 
+/* OBS canvas: legible rankings and a persistent comment/queue strip. */
+.reaction-track-list .reaction-top-item { font-size: .96cqw; }
+.reaction-track-list .reaction-top-item .reaction-supporting { font-size: .84cqw; }
+.reaction-artist-list .reaction-top-item { font-size: .86cqw; }
+.reaction-artist-list .reaction-top-item .reaction-supporting { font-size: .78cqw; }
+.reaction-artist-list .reaction-artist-tier { font-size: .74cqw; white-space: normal; }
+.reaction-track-list .reaction-top-item strong,
+.reaction-artist-list .reaction-top-item strong { display: -webkit-box; overflow: hidden; line-height: 1.22; -webkit-box-orient: vertical; -webkit-line-clamp: 2; white-space: normal; overflow-wrap: anywhere; text-overflow: clip; }
+.reaction-artist-vacant { --tier-rgb: 105, 110, 121; opacity: .58; box-shadow: none; }
+.reaction-artist-vacant .reaction-top-copy { color: #d0d3da; font-size: .8cqw; line-height: 1.3; }
+.reaction-vacant-mark { display: flex; align-items: center; justify-content: center; width: 2.8cqw; height: 2.8cqw; border: 1px dashed #777d89; color: #ccd0d9; font-size: 1.5cqw; font-weight: 900; }
+.reaction-video-frame { width: auto; height: min(100%, 25.3cqw); max-width: 100%; }
+.reaction-bottom-strip { display: grid; grid-template-columns: minmax(0, 65fr) minmax(0, 35fr); height: 8.5cqw; flex: none; border-top: 1px solid var(--line-strong); background: #111217; }
+.reaction-bottom-strip-wide { grid-template-columns: minmax(0, 1fr); }
+.reaction-bottom-strip .reaction-featured-comment { width: auto; height: 100%; min-width: 0; margin: 0; border-radius: 0; animation: none; box-shadow: none; }
+.reaction-bottom-strip .reaction-featured-comment-copy { min-width: 0; flex: 1; align-self: stretch; justify-content: center; }
+.reaction-bottom-strip .reaction-featured-comment-copy strong { flex: none; }
+.reaction-bottom-strip .reaction-featured-comment-text { max-height: 4.1cqw; }
+.reaction-featured-comment-empty { color: #acafbc; font-size: .9cqw; }
+.reaction-queue { min-width: 0; overflow: hidden; border-left: .18cqw solid #ab6ccf; padding: .45cqw .7cqw; background: #1b1422; }
+.reaction-queue h2 { margin-bottom: .35cqw; color: #d9a8f5; font-size: .82cqw; font-weight: 900; }
+.reaction-queue-list { display: grid; gap: .15cqw; }
+.reaction-queue-row { display: flex; min-width: 0; align-items: center; gap: .45cqw; height: 1.12cqw; border: 1px solid rgba(190, 139, 220, .23); padding: .08cqw .3cqw; background: rgba(121, 61, 153, .16); font-size: .7cqw; }
+.reaction-queue-rank { color: #d9a8f5; font-weight: 900; }
+.reaction-queue-row strong { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reaction-queue-count { color: #e0b8fa; font-weight: 900; font-variant-numeric: tabular-nums; }
+.reaction-queue-count-up { animation: reaction-queue-pulse .7s ease-out; }
+.reaction-queue-empty { color: #c1b2ca; font-size: .7cqw; }
+@keyframes reaction-queue-pulse { 30% { color: #fff; text-shadow: 0 0 .55cqw #d9a8f5; transform: scale(1.25); } }
+.reaction-canvas .stage-live-bars i,
+.reaction-canvas .stage-rank-status { animation: none; }
+@media (prefers-reduced-motion: reduce) { .reaction-queue-count-up { animation: none; } }
+
 /* Stage 90 digital identity */
 ::selection { background: #1455f5; color: #fff; }
 :focus-visible { outline: 2px solid #ff77bf; outline-offset: 3px; }
