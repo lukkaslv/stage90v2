@@ -26,7 +26,6 @@ import MaintenancePlaceholder from '@/components/MaintenancePlaceholder';
 import PageHeading from '@/components/PageHeading';
 import SiteFooter from '@/components/SiteFooter';
 import { maintenanceMapFromRows, type MaintenanceMap, type MaintenanceRecord } from '@/lib/maintenance';
-import SiteMaintenance from '@/components/SiteMaintenance';
 
 type AuthMode = 'login' | 'register' | 'invite';
 
@@ -376,7 +375,6 @@ function AppContent() {
 }
 
 export default function App() {
-  if (import.meta.env.VITE_SITE_MAINTENANCE !== 'off') return <SiteMaintenance />;
   if (window.location.pathname === '/studio/obs') return <Suspense fallback={null}><ReactionOutput /></Suspense>;
   return <LoadingProvider><AuthProvider><AppContent /></AuthProvider><PageLoader /></LoadingProvider>;
 }

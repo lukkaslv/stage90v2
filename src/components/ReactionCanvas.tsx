@@ -106,10 +106,10 @@ export default function ReactionCanvas({ view, onRatingChange, onRatingSubmit, s
             {videoUrl ? <iframe key={videoUrl} src={videoUrl} title={videoTitle ?? 'რელიზის ვიდეო'} className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen />
               : <div className="reaction-video-empty flex h-full flex-col items-center justify-center gap-2 px-4 text-center"><Music2 className="text-blue-300" /><span>ამ რელიზს YouTube ბმული არ აქვს.</span></div>}
           </div></div>
-          {featuredComment ? <div key={`${featuredComment.author}:${featuredComment.text}`} className="reaction-featured-comment" role="status">
+          {featuredComment && <div key={`${featuredComment.author}:${featuredComment.text}`} className="reaction-featured-comment" role="status">
             <span className="reaction-featured-comment-avatar" aria-hidden="true">{reactionCommentInitial(featuredComment.author)}</span>
             <span className="reaction-featured-comment-copy"><span className="reaction-featured-comment-label">მაყურებლის კომენტარი</span><strong>{featuredComment.author}</strong><span className="reaction-featured-comment-text">{featuredComment.text}</span></span>
-          </div> : <div className="reaction-comment-placeholder"><span aria-hidden="true">“</span><span><strong>მაყურებლის ხმა</strong><small>შენი კომენტარი აქ გამოჩნდება</small></span></div>}
+          </div>}
           {view.scene === 'tracks' && <p className="reaction-track truncate font-semibold">{selectedTrack ? `მიმდინარე ტრეკი: ${selectedTrack.title}` : 'აირჩიეთ ტრეკი სტუდიაში'}</p>}
         </section>
 
