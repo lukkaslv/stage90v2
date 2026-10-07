@@ -147,7 +147,7 @@ body {
 .reaction-top-heading > .reaction-supporting { font-size: .75cqw; }
 .reaction-top-state { font-size: 1cqw; }
 .reaction-top-list { gap: .48cqw; padding: .16cqw .32cqw .32cqw; }
-.reaction-top-item { --tier-rgb: 189, 196, 205; position: relative; isolation: isolate; display: grid; grid-template-columns: 2.6cqw minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; align-items: center; gap: .25cqw .4cqw; overflow: hidden; border: 1px solid rgba(var(--tier-rgb), .8); border-radius: .2cqw; background: linear-gradient(95deg, rgba(var(--tier-rgb), .19), #14161b 70%); box-shadow: 0 0 .65cqw rgba(var(--tier-rgb), .42), 0 0 1.1cqw rgba(var(--tier-rgb), .17), inset 0 0 0 1px rgba(var(--tier-rgb), .2); padding: .35cqw .4cqw .35cqw .5cqw; font-size: .74cqw; line-height: 1.25; }
+.reaction-top-item { --tier-rgb: 189, 196, 205; position: relative; isolation: isolate; display: grid; min-height: 0; grid-template-columns: 2.6cqw minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; align-items: center; gap: .25cqw .4cqw; overflow: hidden; contain: paint; border: 1px solid rgba(var(--tier-rgb), .8); border-radius: .2cqw; background: linear-gradient(95deg, rgba(var(--tier-rgb), .19), #14161b 70%); box-shadow: 0 0 .65cqw rgba(var(--tier-rgb), .42), 0 0 1.1cqw rgba(var(--tier-rgb), .17), inset 0 0 0 1px rgba(var(--tier-rgb), .2); padding: .35cqw .4cqw .35cqw .5cqw; font-size: .74cqw; line-height: 1.25; }
 .reaction-top-item[data-tier="ვერცხლი"] { --tier-rgb: 189, 196, 205; }
 .reaction-top-item[data-tier="ოქრო"] { --tier-rgb: 216, 187, 120; }
 .reaction-top-item[data-tier="ზურმუხტი"] { --tier-rgb: 131, 190, 161; }
@@ -188,7 +188,8 @@ body {
 .reaction-top-list[data-density="dense"] .reaction-top-cover { width: 2.15cqw; height: 2.15cqw; }
 .reaction-top-list[data-density="dense"] .reaction-top-item .reaction-supporting { font-size: .57cqw; }
 .reaction-top-list[data-density="dense"] .reaction-top-item > .stage-rank-status { font-size: .6cqw; }
-.reaction-top-copy { grid-column: 2; grid-row: 1; min-width: 0; max-height: 100%; overflow: hidden; align-self: center; }
+.reaction-top-copy { grid-column: 2; grid-row: 1; display: flex; min-width: 0; min-height: 0; height: 100%; flex-direction: column; justify-content: safe center; overflow: hidden; }
+.reaction-top-copy > * { flex-shrink: 0; }
 .reaction-top-leader-label { display: block; overflow: hidden; margin-bottom: .18cqw; border-left: .12cqw solid #ff2299; padding-left: .25cqw; color: #ffa2ce; font-size: .66cqw; font-weight: 900; line-height: 1.15; white-space: nowrap; }
 .reaction-top-list[data-density="dense"] .reaction-top-leader-label { font-size: .52cqw; }
 .reaction-top-live .stage-live-indicator { font-size: .8cqw; }
