@@ -397,7 +397,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
     const reviewPayload = {
       release_id: activeRelease.id,
       user_id: authenticatedUser.id,
-      title: formTab === 'review' ? reviewTitle.trim() : existingReview?.title ?? (formTab === 'value' ? 'ღირებულების შეფასება' : 'შეფასება'),
+      title: formTab === 'review' ? reviewTitle.trim() : existingReview?.title ?? 'შეფასება',
       content: formTab === 'review' ? reviewText.trim() : existingReview?.body ?? '',
       rhymes: null,
       structure: null,
@@ -682,7 +682,7 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                 <button
                   key={tab.id}
                   onClick={() => setFormTab(tab.id)}
-                  className={`min-w-0 rounded-lg px-3 py-2 text-sm font-semibold transition-colors sm:flex-1 ${tab.id === 'value' ? 'col-span-2' : ''} ${
+                  className={`min-w-0 rounded-lg px-3 py-2 text-sm font-semibold transition-colors sm:flex-1 ${
                     formTab === tab.id
                       ? 'bg-blue-400/10 text-blue-400'
                       : 'text-gray-500 hover:text-gray-300'
@@ -794,19 +794,6 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
                     </p>
                     <p className="mt-1 text-xs text-gray-600">
                       თქვენი ქულა: <span className="font-bold text-blue-400">{totalScore} / 90</span>
-                    </p>
-                  </div>
-                )}
-
-                {formTab === 'value' && (
-                  <div className="flex flex-col items-center justify-center py-10 text-center">
-                    <Gem className={`mb-3 h-10 w-10 ${personalTierConfig.icon}`} />
-                    <p className="text-sm text-gray-400">ალბომის ღირებულების მინიჭება</p>
-                    <div className={`mt-3 flex items-center gap-2 rounded-xl px-6 py-3 ${personalTierConfig.badge}`}>
-                      <span className="text-2xl font-extrabold">{personalTier}</span>
-                    </div>
-                    <p className="mt-3 text-xs text-gray-600">
-                      თქვენი შეფასების ქულა: <span className="font-bold text-blue-400">{totalScore} / 90</span>
                     </p>
                   </div>
                 )}

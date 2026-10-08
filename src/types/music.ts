@@ -77,7 +77,6 @@ export const REVIEW_RULES = [
 export const REVIEW_FORM_TABS = [
   { id: 'review', label: 'რეცენზია' },
   { id: 'rating-only', label: 'შეფასება რეცენზიის გარეშე' },
-  { id: 'value', label: 'ღირებულების მინიჭება' },
 ] as const;
 
 export interface Review {
