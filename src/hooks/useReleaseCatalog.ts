@@ -107,17 +107,14 @@ export function useReleaseCatalog(userId: string | undefined, refreshKey: number
 
     const loadTop = async () => {
       const version = ++rankingVersion;
-      const ids = [...reviewCounts].sort((a, b) => b[1] - a[1]
-        || (releaseDates.get(b[0]) ?? '').localeCompare(releaseDates.get(a[0]) ?? '')
-        || a[0].localeCompare(b[0])).slice(0, 15).map(([id]) => id);
-      const missing = ids.filter((id) => !loadedIds.has(id));
-      if (missing.length) {
-        const { data, error } = await queryCatalog((columns) => client.from('releases').select(columns).in('id', missing).eq('is_active', true).limit(15).returns<Record<string, unknown>[]>());
-        if (cancelled || error || version !== rankingVersion) return;
-        const releases = (data ?? []).map((row) => { loadedIds.add(String(row.id)); return normalizeCatalogRelease(row); });
-        setCatalog((current) => [...new Map([...current, ...releases].map((release) => [String(release.id), release])).values()]);
-      }
-      if (!cancelled && version === rankingVersion) setTopIds(ids);
+      const { data, error } = await queryCatalog((columns) => client.from('releases').select(columns)
+        .eq('is_active', true).gt('overall_score', 0)
+        .order('overall_score', { ascending: false }).order('id', { ascending: true })
+        .limit(15).returns<Record<string, unknown>[]>());
+      if (cancelled || error || !data || version !== rankingVersion) return;
+      const releases = data.map((row) => { loadedIds.add(String(row.id)); return normalizeCatalogRelease(row); });
+      setCatalog((current) => [...new Map([...current, ...releases].map((release) => [String(release.id), release])).values()]);
+      setTopIds(releases.map((release) => String(release.id)));
     };
     const loadNewNames = async () => {
       const version = ++namesVersion;

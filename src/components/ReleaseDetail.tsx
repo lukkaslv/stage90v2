@@ -93,6 +93,8 @@ function normalizeRelease(row: Record<string, unknown>): Release {
     year: Number(row.year ?? new Date().getFullYear()),
     score,
     overall_score: row.overall_score == null ? undefined : Number(row.overall_score),
+    preliminary_score: row.preliminary_score == null ? undefined : Number(row.preliminary_score),
+    eligible_voter_count: row.eligible_voter_count == null ? undefined : Number(row.eligible_voter_count),
     valueTier: typeof row.value_tier === 'string' ? row.value_tier : undefined,
     score_community: row.score_community == null ? undefined : Number(row.score_community),
     community_score: row.community_score == null ? undefined : Number(row.community_score),
@@ -581,11 +583,11 @@ export default function ReleaseDetail({ release, onBack, onOpenRelease, onOpenRe
               <div className="flex items-center gap-3 rounded-[11px] bg-[#101013] px-4 py-3">
                 <Gem className={`h-5 w-5 shrink-0 ${releaseTierConfig?.icon ?? 'text-zinc-500'}`} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-lg font-extrabold leading-tight">{boundReleaseTier ?? 'ჯერ არ შეფასებულა'}</p>
-                  <p className="mt-0.5 text-[11px] leading-tight text-gray-400">{boundReleaseTier ? 'ყველა რეცენზიის საშუალო' : 'რეცენზიები ჯერ არ არის'}</p>
+                  <p className="text-lg font-extrabold leading-tight">{boundReleaseTier ?? (activeRelease.preliminary_score ? 'წინასწარი შეფასება' : 'ჯერ არ შეფასებულა')}</p>
+                  <p className="mt-0.5 text-[11px] leading-tight text-gray-400">{boundReleaseTier ? 'დადასტურებული შემფასებლების საშუალო' : activeRelease.preliminary_score ? `${activeRelease.eligible_voter_count ?? 0}/3 დადასტურებული შემფასებელი · რეიტინგში ჯერ არ ითვლება` : 'დადასტურებული შეფასებები ჯერ არ არის'}</p>
                 </div>
-                {boundReleaseTier && <span className="shrink-0 text-xl font-bold tabular-nums text-white" aria-label={`საერთო ქულა ${activeRelease.overall_score} 90-დან`}>
-                  {activeRelease.overall_score}<span className="ml-0.5 text-xs font-medium text-gray-500">/90</span>
+                {(boundReleaseTier || activeRelease.preliminary_score) && <span className="shrink-0 text-xl font-bold tabular-nums text-white" aria-label={`საშუალო ქულა ${activeRelease.overall_score || activeRelease.preliminary_score} 90-დან`}>
+                  {activeRelease.overall_score || activeRelease.preliminary_score}<span className="ml-0.5 text-xs font-medium text-gray-500">/90</span>
                 </span>}
               </div>
             </div>

@@ -24,12 +24,13 @@ export default function ReleaseCard({ release, onClick, userReviewsMap = {} }: {
           <p className="mt-1 truncate text-sm text-gray-400">{release.artist}</p>
           <div className="stage-release-verdict mt-4 flex items-center justify-between gap-2">
             <span className={valueTier ? STRICT_VALUE_TIER_CONFIG[valueTier].badge : 'stage-tier stage-tier-unrated'}>
-              {valueTier ? valueTier : 'ჯერ არ შეფასებულა'}
+              {valueTier ? valueTier : release.preliminary_score ? 'წინასწარი შეფასება' : 'ჯერ არ შეფასებულა'}
             </span>
-            {valueTier && <span className="stage-verdict-number" aria-label={`საერთო ქულა ${release.overall_score} 90-დან`}>{release.overall_score}<small>/90</small></span>}
+            {(valueTier || release.preliminary_score) && <span className="stage-verdict-number" aria-label={`საშუალო ქულა ${release.overall_score || release.preliminary_score} 90-დან`}>{release.overall_score || release.preliminary_score}<small>/90</small></span>}
             <span className="flex shrink-0 items-center gap-1 text-xs text-gray-400"><MessageCircle className="h-3.5 w-3.5" aria-hidden="true" />{reviewCount}</span>
           </div>
           <ScoreTriplet community={communityScore} media={criticsScore} personal={personalScore} className="mt-4 border-t border-white/10 pt-3" />
+          {!valueTier && Boolean(release.preliminary_score) && <p className="mt-2 text-[11px] text-gray-400">რეიტინგამდე: {release.eligible_voter_count ?? 0}/3 დადასტურებული შემფასებელი</p>}
         </div>
       </button>
     </article>

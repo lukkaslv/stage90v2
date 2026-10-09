@@ -12,6 +12,8 @@ export interface Release {
   year: number;
   score: number;
   overall_score?: number;
+  preliminary_score?: number;
+  eligible_voter_count?: number;
   score_community?: number;
   community_score?: number;
   score_critics?: number;

@@ -15,6 +15,8 @@ export function normalizeCatalogRelease(row: Record<string, unknown>): Release {
     year: Number(item.year ?? new Date().getFullYear()),
     score,
     overall_score: item.overall_score == null ? undefined : Number(item.overall_score),
+    preliminary_score: item.preliminary_score == null ? undefined : Number(item.preliminary_score),
+    eligible_voter_count: item.eligible_voter_count == null ? undefined : Number(item.eligible_voter_count),
     valueTier: typeof item.value_tier === 'string' ? item.value_tier : undefined,
     score_community: item.score_community == null ? undefined : Number(item.score_community),
     community_score: item.community_score == null && item.score_community == null ? undefined : Number(item.community_score ?? item.score_community),

@@ -33,7 +33,7 @@ export default function TopArtists({ preview = false, onArtistClick }: Props) {
       <span>{data ? 'რეიტინგის განახლება ვერ მოხერხდა. ნაჩვენებია ბოლო მიღებული მონაცემები.' : 'არტისტების რეიტინგი ვერ ჩაიტვირთა.'}</span>
       <button type="button" onClick={reload} className="underline underline-offset-4">ხელახლა ცდა</button>
     </div>}
-    {loading && !data ? <SectionLoader /> : !error && entries.length === 0 ? <p className="stage-empty-state">რეიტინგი გამოჩნდება, როცა არტისტს მინიმუმ 3 შეფასებული ტრეკი ექნება.</p> : <ol className={preview ? 'stage-artist-preview' : 'stage-artist-leaderboard'}>
+    {loading && !data ? <SectionLoader /> : !error && entries.length === 0 ? <p className="stage-empty-state">რეიტინგისთვის არტისტს მინიმუმ 3 ტრეკი სჭირდება, თითოეულს კი 3 დადასტურებული შემფასებელი.</p> : <ol className={preview ? 'stage-artist-preview' : 'stage-artist-leaderboard'}>
       {entries.map((artist) => {
         const tier = artistTierFromRank(artist);
         return <li key={artist.id} className={`stage-artist-${tier?.key ?? 'spark'}`}>

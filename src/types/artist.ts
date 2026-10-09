@@ -44,6 +44,8 @@ export interface ArtistRelease {
   track_number: number | null;
   created_at: string;
   overall_score: number;
+  preliminary_score: number;
+  eligible_voter_count: number;
   is_scoring_track: boolean;
   score_counted: boolean;
 }

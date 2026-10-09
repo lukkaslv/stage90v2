@@ -24,10 +24,10 @@ export default function Top15AllTime({ onReleaseClick, preview = false }: Top15A
     <div className="stage-chart-tabs mb-4 flex flex-wrap items-center gap-2" role="group" aria-label="რეიტინგის პერიოდი">
       <button type="button" onClick={() => setChart('all_time')} aria-pressed={!weekly} className={!weekly ? 'stage-chart-tab-active' : ''}>ყველა დროის</button>
       <button type="button" onClick={() => setChart('weekly')} aria-pressed={weekly} className={weekly ? 'stage-chart-tab-active' : ''}>ბოლო 7 დღე</button>
-      {weekly && <span className="text-[11px] text-gray-400">მინიმუმ 3 შემფასებელი</span>}
+      <span className="text-[11px] text-gray-400">მინიმუმ 3 დადასტურებული შემფასებელი</span>
       {!chartLoading && !chartError && entries.length > 0 && <LiveRankingIndicator compact={preview} />}
     </div>
-    {chartLoading && entries.length === 0 ? <SectionLoader /> : chartError && entries.length === 0 ? <p className="stage-empty-state">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : entries.length === 0 ? <p className="stage-empty-state">{weekly ? 'ბოლო 7 დღეში საკმარისი შეფასება ჯერ არ არის.' : 'შეფასებული აქტიური რელიზები ჯერ არ არის.'}</p> : <div onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto scroll-smooth px-4 pb-3">
+    {chartLoading && entries.length === 0 ? <SectionLoader /> : chartError && entries.length === 0 ? <p className="stage-empty-state">რეიტინგის ჩატვირთვა ვერ მოხერხდა.</p> : entries.length === 0 ? <p className="stage-empty-state">{weekly ? 'ბოლო 7 დღეში საკმარისი შეფასება ჯერ არ არის.' : 'რეიტინგისთვის თითოეულ რელიზს 3 დადასტურებული შემფასებელი სჭირდება.'}</p> : <div onWheel={(event) => { if (event.deltaY !== 0) event.currentTarget.scrollLeft += event.deltaY; }} className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto scroll-smooth px-4 pb-3">
       {entries.slice(0, preview ? 6 : 15).map(({ release, score, votes }, index) => {
         const tier = weekly ? valueTierFromScore(score) : releaseValueTier(release);
         return <button key={String(release.id)} type="button" onClick={() => onReleaseClick(release)} className="stage-daily-card group w-[194px] shrink-0 text-left" aria-label={`${index + 1}. ${release.title} — ${release.artist}, ${score} ქულა 90-დან`}>
