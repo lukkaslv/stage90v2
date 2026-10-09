@@ -53,10 +53,10 @@ export default function ArtistProfile({ id, onBack, onReleaseClick }: Props) {
         </div>
       </header>
       <dl className="stage-artist-stats my-7">
-        <div><dt>მიმდინარე ადგილი</dt><dd>{artist.rank ? `#${artist.rank}` : <span className="text-base">რეიტინგამდე კიდევ {3 - artist.rated_track_count} ტრეკი</span>}</dd></div>
+        <div><dt>მიმდინარე ადგილი</dt><dd>{artist.rank ? `#${artist.rank}` : <span className="text-base">რეიტინგამდე კიდევ {3 - artist.rated_track_count} საკმარისად შეფასებული ტრეკი</span>}</dd></div>
         <div><dt>ჯამური ქულა</dt><dd>{artistPoints(artist.total_score)}</dd></div>
         <div><dt>საშუალო შეფასება</dt><dd>{artist.rated_track_count ? `${artistPoints(artist.average_score)}/90` : '—'}</dd></div>
-        <div><dt>შეფასებული ტრეკები</dt><dd>{artist.rated_track_count}<small> / {artist.track_count}</small></dd></div>
+        <div><dt>რეიტინგში ჩართული ტრეკები</dt><dd>{artist.rated_track_count}<small> / {artist.track_count}</small></dd></div>
       </dl>
       <p className="mb-7 max-w-3xl text-sm leading-6 text-gray-400">ადგილს განსაზღვრავს მინიმუმ 3 აქტიური ტრეკის საშუალო ქულა. თითოეულ ტრეკს რეიტინგში მოსახვედრად 3 დადასტურებული შემფასებელი სჭირდება. ალბომისა და კრებულის ქულა ცალკე არ ემატება. სტატუსი დამოკიდებულია ადგილსა და 60+ და 70+ ქულის მქონე ტრეკების რაოდენობაზე.</p>
       <section aria-labelledby="artist-catalog-title">
